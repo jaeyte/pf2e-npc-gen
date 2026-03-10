@@ -1,0 +1,33 @@
+{
+  "id": "pf2e-npc-gen",
+  "title": "Pathfinder 2e NPC Generator",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "description": "A module to generate Pathfinder 2e NPCs complete with stats, features, and equipment based on role and level guidelines.",
+  "authors": [
+    {
+      "name": "Antigravity",
+      "flags": {}
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf2e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "6.0.0"
+        }
+      }
+    ]
+  },
+  "esmodules": ["scripts/main.js"],
+  "scripts": [],
+  "styles": ["styles/module.css"],
+  "packs": [],
+  "languages": [],
+  "flags": {}
+}

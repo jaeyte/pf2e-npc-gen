@@ -1,0 +1,66 @@
+<div class="pf2e-npc-gen-app-content">
+  
+  <section class="pf2e-generator-card manual-card">
+    <header class="card-header">
+      <h3><i class="fas fa-hammer"></i> Manual Generation</h3>
+      <p class="subtitle">Precisely control the core mechanics of the generated NPC.</p>
+    </header>
+    
+    <div class="card-content">
+      <div class="form-group">
+        <label for="npc-level"><i class="fas fa-sort-numeric-up-alt"></i> Level</label>
+        <div class="form-fields">
+          <input type="number" name="level" id="npc-level" value="{{level}}" min="-1" max="25" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="npc-role"><i class="fas fa-theater-masks"></i> Concept</label>
+        <div class="form-fields">
+          <select name="role" id="npc-role">
+            {{selectOptions roles selected=role localize=true}}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-balance-scale"></i> Adjustments</label>
+        <div class="form-fields adjustments-group">
+          <label class="checkbox-label"><input type="checkbox" name="templateElite" id="template-elite"> Elite (+1)</label>
+          <label class="checkbox-label"><input type="checkbox" name="templateWeak" id="template-weak"> Weak (-1)</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="generate-equipment"><i class="fas fa-khanda"></i> Equipment</label>
+        <div class="form-fields">
+          <label class="checkbox-label">
+            <input type="checkbox" name="generateEquipment" id="generate-equipment" {{checked generateEquipment}}>
+            Auto-generate appropriate gear
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider">
+    <span>OR</span>
+  </div>
+
+  <section class="pf2e-generator-card ai-card">
+    <header class="card-header">
+      <h3><i class="fas fa-robot"></i> AI Prompt Generation</h3>
+      <p class="subtitle">Describe your NPC and let the LLM handle the stats.</p>
+    </header>
+
+    <div class="card-content">
+      <div class="form-group stacked">
+        <div class="form-fields">
+          <textarea name="aiPrompt" id="ai-prompt" rows="3" placeholder="e.g., 'A stealthy level 4 goblin assassin with poison daggers.'"></textarea>
+        </div>
+        <p class="notes warning"><i class="fas fa-exclamation-triangle"></i> Prompts override all manual selections above.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
