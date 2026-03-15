@@ -1,98 +1,119 @@
-# Pathfinder 2e NPC & Loot Generator
+# PF2e NPC & Loot Generator
 
-A modern, high-performance module for **Foundry VTT** designed to streamline the creation of NPCs and encounter loot for the **Pathfinder 2e** system.
+A Foundry VTT module for Pathfinder 2e that generates combat-ready NPCs and encounter loot on the fly. Stats are pulled directly from the Gamemastery Guide tables, so everything that comes out is properly balanced for your party's level.
 
-## ✨ Features
-
-### 🤖 AI NPC Generator *(New!)*
-- **Concept-Driven Generation**: Type a free-text description like *"veteran fire cult lieutenant"* or *"ancient elven spy"* and the AI infers the role, ancestry, theme, level, name, and biography automatically.
-- **Combat-Optimized**: All mechanical stats (HP, AC, saves, attack, damage) are still generated from the PF2e Gamemastery Guide stat tables — the AI handles interpretation and flavor, not balance.
-- **Multi-Provider Support**: Works with **OpenAI** (GPT-4o), **Claude** (Anthropic), or any **custom OpenAI-compatible endpoint** (local Ollama, LM Studio, etc.).
-- **Level Override**: Optionally pin a specific level and let the AI handle everything else.
-- **Rich Flavor**: AI writes a unique biography and personality quirk for every NPC.
-
-### 🎲 NPC Generator
-- **Level Scaling**: Generates NPCs from Level -1 to 25 with accurate statistics based on the Gamemastery Guide guidelines.
-- **Ancestry System**: NPCs have random or selectable ancestries (Human, Elf, Dwarf, Orc, Goblin) that affect traits, speeds, senses, and stats.
-- **Thematic Templates**: Apply powerful overlays like **Infernal**, **Undead**, **Shadow**, or **Elite** to add resistances, weaknesses, and unique damage types.
-- **Role-Based Templates**: Choose from Brute, Skirmisher, Spellcaster, Sniper, or Soldier roles for automatic balancing.
-- **Handcrafted Flavor**: Automatically generates unique names and biographical quirks for every NPC.
-- **Intelligent Feat Selection**: Dynamically queries the full PF2e Feat compendium, filtering by level and role traits.
-
-### 💰 Loot Generator
-- **Encounter-Based Loot**: Generate treasure hoards, consumables, or permanent items for levels 1-25.
-- **Currency Calculation**: Automatically adds gold pieces based on encounter level.
-- **Foundry Integration**: Creates a "Loot" type actor and populates it instantly with items from the official SRD.
-
-### 🎨 Modern UI/UX
-- **Sleek Interface**: Features a "Glassmorphism" aesthetic with premium typography and a tabbed layout.
-- **Consolidated Entry**: Accessed via a single violet "Generate NPC" button in the **Actor Directory** header.
+![Foundry v13](https://img.shields.io/badge/Foundry-v13-informational)
+![PF2e 6.0+](https://img.shields.io/badge/PF2e-6.0%2B-blueviolet)
 
 ---
 
-## 🚀 Installation
+## What it does
 
-1. Open the Foundry VTT Setup screen.
-2. Go to the **Add-on Modules** tab.
-3. Search for "PF2e NPC Generator" or install via manifest URL:
-   `https://github.com/jaeyte/pf2e-npc-gen/releases/latest/download/module.json`
+There are three tools in one dialog, opened from a button in your Actors sidebar:
 
----
+**NPC Generator** — Pick a level, role, ancestry, and thematic template. Hit create and a fully-statted NPC shows up in your sidebar ready to drag into a scene.
 
-## 🛠 Usage
+**AI Generator** — Type a concept in plain English. The AI figures out the role, ancestry, theme, and level for you, writes a biography, and the module builds the stat block. Good for when you need something specific in a hurry.
 
-1. Open the **Actors** tab in your Foundry world.
-2. Click the **Generate NPC** button in the header.
-3. Use the **NPC Generator** tab for quick template-based NPCs, or the **AI Generator** tab for concept-driven generation.
-4. The new actor will appear in your sidebar automatically.
+**Loot Generator** — Set an encounter level and loot type, get a populated loot actor with items and gold pulled from the SRD.
 
 ---
 
-## 🤖 AI Generator Setup
+## Installation
 
-### 1. Configure Module Settings
-Go to **Game Settings → Module Settings → Pathfinder 2e NPC Generator** and set:
+Install from the Foundry module browser, or paste the manifest URL directly:
 
-| Setting | Description |
-|---------|-------------|
-| **AI Provider** | Choose OpenAI, Claude (Anthropic), or Custom |
-| **AI API Key** | Your personal API key (stored locally in your browser only — never sent to the Foundry server) |
-| **AI Model** *(optional)* | Override the default model (e.g. `gpt-4o-mini`, `claude-opus-4-5`) |
-| **Custom API Endpoint URL** | Required when provider is set to *Custom* |
+```
+https://github.com/jaeyte/pf2e-npc-gen/releases/latest/download/module.json
+```
 
-### 2. Choose a Provider
+**Requirements:** Foundry v13+, PF2e system v6.0+
 
-#### OpenAI *(Recommended for browser-hosted Foundry)*
-OpenAI's API supports browser `fetch()` calls directly — no proxy needed.
+---
+
+## NPC Generator
+
+Roles determine the stat spread. Ancestries add traits, senses, and minor stat adjustments. Thematic templates layer on top of both.
+
+| Role | Stat Focus |
+|------|-----------|
+| Brute | High HP and damage, lower AC |
+| Skirmisher | High AC and Reflex, mobile melee |
+| Spellcaster | High Will and spell DC, low HP |
+| Sniper | High Reflex and ranged attack/damage |
+| Soldier | High HP, AC, and Fortitude |
+
+| Theme | What it adds |
+|-------|-------------|
+| Elite | +2 to AC, attack, and saves — +10 HP |
+| Infernal | Fire resistance and damage, fiend trait |
+| Frost | Cold resistance and damage |
+| Undead | Void resistance, vitality weakness, undead trait |
+| Shadow | Precision resistance, greater darkvision |
+
+---
+
+## AI Generator
+
+The AI reads your concept and decides the role, ancestry, theme, and level. The stat block is still built from the GMG tables — the AI handles interpretation and flavor, not the math.
+
+**To get started:**
+
+1. Go to **Game Settings → Module Settings → Pathfinder 2e NPC Generator**
+2. Set your AI provider and paste in your API key
+3. Open the generator and switch to the **AI Generator** tab
+
+### Choosing a provider
+
+**OpenAI** is the easiest option for most setups. The API supports browser-based requests with no extra configuration.
 - Get a key at [platform.openai.com](https://platform.openai.com)
-- Default model: `gpt-4o-mini` (fast and cheap)
+- Default model: `gpt-4o-mini`
 
-#### Claude / Anthropic
-Anthropic's production API **does not allow direct browser requests** due to CORS restrictions. To use Claude with browser-hosted Foundry, point the **Custom** provider at a CORS proxy that forwards to Anthropic's API.
+**Claude (Anthropic)** works great but has a limitation: Anthropic's API blocks direct browser requests (CORS policy). If you're running Foundry as a desktop app this isn't an issue. If you're on a hosted server, you'll need to route through a proxy — point the **Custom** provider at it.
 
-> **Foundry Desktop (Electron app)**: CORS restrictions do not apply — Claude works directly.
+**Custom / Local** covers anything OpenAI-compatible: Ollama, LM Studio, a self-hosted proxy, etc. Set the provider to *Custom* and enter the full endpoint URL.
 
-#### Local / Custom Endpoint (Ollama, LM Studio, etc.)
-Set provider to **Custom** and enter the full URL to your OpenAI-compatible endpoint.
+```
+Ollama:    http://localhost:11434/v1/chat/completions
+LM Studio: http://localhost:1234/v1/chat/completions
+```
 
-Examples:
-- Ollama: `http://localhost:11434/v1/chat/completions`
-- LM Studio: `http://localhost:1234/v1/chat/completions`
+If you're using a local model, set the **AI Model** field to whatever your server expects (`llama3`, `mistral`, etc.).
 
-Set **AI Model** to the model name your server expects (e.g. `llama3`, `mistral`).
+### Module settings reference
 
-### 3. Generate an NPC
-1. Click **Generate NPC** in the Actors sidebar.
-2. Switch to the **AI Generator** tab.
-3. Type a concept description — be as specific or vague as you like:
-   - *"goblin pirate captain"*
-   - *"ancient undead elven archmage, cold and calculating"*
-   - *"a disgraced dwarf soldier turned bandit"*
-4. Optionally set a **Level Override** — leave blank and the AI will infer it from your description.
-5. Click **Generate with AI**.
+| Setting | Scope | Notes |
+|---------|-------|-------|
+| AI Provider | World | Applies to everyone in the game |
+| AI API Key | Client | Stored in your browser only, never touches the server |
+| AI Model | Client | Leave blank to use the provider default |
+| Custom Endpoint URL | Client | Required when provider is set to Custom |
 
-The AI will select the role, ancestry, theme, and level, then the module builds a fully stat-complete, combat-ready NPC using the PF2e GMG tables.
+### Writing prompts
+
+Vague is fine. Specific is better. A few examples:
+
+```
+goblin pirate captain
+veteran fire cult lieutenant, level 8
+disgraced dwarf soldier turned bandit lord
+ancient elven archmage, cold and calculating
+```
+
+If you want a specific level, type it in the Level Override field — the AI will handle everything else.
 
 ---
 
-*Created by Antigravity*
+## Loot Generator
+
+Generates a loot actor with items pulled from the PF2e SRD. Encounter level determines item quality and gold value.
+
+| Type | Contents |
+|------|---------|
+| Treasure Hoard | Mixed permanent items, consumables, and gold |
+| Consumables Only | Potions, scrolls, and similar |
+| Permanent Items Only | Weapons, armor, and equipment |
+
+---
+
+*Made by Antigravity*
