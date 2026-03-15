@@ -1,193 +1,173 @@
 import { STAT_TABLES, ROLE_TEMPLATES } from "./DataTables.js";
 import { BASIC_EQUIPMENT, ROLE_EQUIPMENT_PREFS } from "./EquipmentTables.js";
 import { ROLE_FEATURES } from "./FeatureTables.js";
+import { ANCESTRIES, PERSONALITY_QUIRKS } from "./AncestryTables.js";
+import { THEMES } from "./ThemeTables.js";
 
 export class EntityBuilder {
-    constructor(params = {}) {
-        const {
-            level = 1,
-            roleKey = "brute",
-            generateEquipment = true,
-            name = null,
-            biography = null,
-            templateAdjustment = null,
-            spellTradition = "arcane",
-            spellcastingType = "innate",
-            equipmentList = [],
-            spellList = [],
-            featureList = [],
-            skillList = []
-        } = params;
-
-        // Clamp level between -1 and 25
+    constructor(level, roleKey, generateEquipment, ancestryKey = "random", themeKey = "none", overrides = {}) {
         this.level = Math.max(-1, Math.min(25, level));
 
-        // Use brute as fallback if role is invalid
+        // Setup Role
         this.roleKey = ROLE_TEMPLATES[roleKey] ? roleKey : "brute";
         this.roleTemplate = ROLE_TEMPLATES[this.roleKey];
 
+        // Setup Ancestry
+        this.ancestryKey = ancestryKey === "random" ? this._getRandomKey(ANCESTRIES) : ancestryKey;
+        this.ancestry = ANCESTRIES[this.ancestryKey] || ANCESTRIES.human;
+
+        // Setup Theme
+        this.themeKey = themeKey;
+        this.theme = THEMES[this.themeKey] || THEMES.none;
+
         this.generateEquipment = generateEquipment;
-        this.name = name;
-        this.biography = biography;
-        this.templateAdjustment = templateAdjustment;
-        this.spellTradition = spellTradition || "arcane";
-        this.spellcastingType = spellcastingType || "innate";
+        this.levelIndex = this.level + 1;
+        this.overrides = overrides; // { name?, biography?, personality? } from AI generation
+    }
 
-        this.customEquipment = Array.isArray(equipmentList) ? equipmentList : [];
-        this.customSpells = Array.isArray(spellList) ? spellList : [];
-        this.customFeatures = Array.isArray(featureList) ? featureList : [];
-        this.customSkills = Array.isArray(skillList) ? skillList : [];
-
-        this.levelIndex = this.level + 1; // Array index: -1 is index 0, 0 is index 1, etc.
+    _getRandomKey(obj) {
+        const keys = Object.keys(obj);
+        return keys[Math.floor(Math.random() * keys.length)];
     }
 
     async generateNPC() {
-        const fallbackName = `Generated ${this.roleKey.charAt(0).toUpperCase() + this.roleKey.slice(1)} (Level ${this.level})`;
-        const actorName = this.name || fallbackName;
+        const firstName = this.ancestry.names[Math.floor(Math.random() * this.ancestry.names.length)];
+        const prefix = this.theme.prefix ? this.theme.prefix + " " : "";
+        const actorName = this.overrides.name
+            ? this.overrides.name
+            : `${prefix}${firstName} (${this.ancestry.name} ${this.roleKey.capitalize()})`;
+
+        let bio;
+        if (this.overrides.biography) {
+            bio = this.overrides.biography;
+            if (this.overrides.personality) bio += `<p><em>${this.overrides.personality}</em></p>`;
+        } else {
+            bio = this._generateBio(firstName);
+        }
 
         let actorData = {
             name: actorName,
             type: "npc",
-            system: { ...this._generateBaseStats() },
+            system: { 
+                ...this._generateBaseStats(),
+                details: {
+                    level: { value: this.level },
+                    publicNotes: bio,
+                    biography: { value: bio }
+                }
+            },
             items: []
         };
 
-        if (this.biography) {
-            actorData.system.details.publicNotes = this.biography;
-        }
+        // Apply Ancestry & Theme Traits
+        actorData.system.traits = {
+            value: [...new Set([...this.ancestry.traits, ...(this.theme.traits || [])])]
+        };
 
-        // Add standard strike if it's a martial-ish concept
+        // Add standard strike
         if (this.roleTemplate.attack) {
             actorData.items.push(this._generateBaseStrike());
         }
 
-        // Add dummy spellcasting entry if it's a caster concept
+        // Add spellcasting entry
         if (this.roleTemplate.spellDC) {
             const spellcastingEntry = this._generateSpellcastingEntry();
-            // Generate a random ID so we can link spells to it
             spellcastingEntry._id = foundry.utils.randomID();
             actorData.items.push(spellcastingEntry);
-
             const spellItems = await this._generateSpells(spellcastingEntry._id);
             actorData.items.push(...spellItems);
         }
 
         if (this.generateEquipment) {
-            const equipmentItems = await this._generateEquipment();
-            actorData.items.push(...equipmentItems);
+           const equipmentItems = await this._generateEquipment();
+           actorData.items.push(...equipmentItems);
         }
 
-        // Add Role Features
         const featureItems = await this._generateFeatures();
         actorData.items.push(...featureItems);
 
-        // Create the Actor in Foundry
         const newActor = await Actor.create(actorData);
         return newActor;
     }
 
+    _generateBio(name) {
+        const quirk = PERSONALITY_QUIRKS[Math.floor(Math.random() * PERSONALITY_QUIRKS.length)];
+        return `<p><strong>${name}</strong> is a ${this.ancestry.name} ${this.roleKey}. ${this.theme.description}</p><p><em>Quirk: ${quirk}</em></p>`;
+    }
+
     _generateBaseStats() {
-        const hpVal = STAT_TABLES.hp[this.roleTemplate.hp][this.levelIndex];
-        const acVal = STAT_TABLES.ac[this.roleTemplate.ac][this.levelIndex];
+        let hpVal = STAT_TABLES.hp[this.roleTemplate.hp][this.levelIndex];
+        let acVal = STAT_TABLES.ac[this.roleTemplate.ac][this.levelIndex];
+        
+        let fortVal = STAT_TABLES.saves[this.roleTemplate.fortitude][this.levelIndex];
+        let refVal  = STAT_TABLES.saves[this.roleTemplate.reflex][this.levelIndex];
+        let willVal = STAT_TABLES.saves[this.roleTemplate.will][this.levelIndex];
 
-        const fortVal = STAT_TABLES.saves[this.roleTemplate.fortitude][this.levelIndex];
-        const refVal = STAT_TABLES.saves[this.roleTemplate.reflex][this.levelIndex];
-        const willVal = STAT_TABLES.saves[this.roleTemplate.will][this.levelIndex];
+        // Apply Ancestry Tweaks
+        if (this.ancestry.statTweaks) {
+            if (this.ancestry.statTweaks.hp) hpVal += this.ancestry.statTweaks.hp;
+        }
 
-        // Calculate a competitive skill mod for this level
-        const highSkillMod = STAT_TABLES.attack.high[this.levelIndex] - 2; // Rough approximation for good skills
-        const skillsObj = {};
-
-        // If AI provided specific skills, use them exclusively
-        if (this.customSkills.length > 0) {
-            for (const skill of this.customSkills) {
-                if (skill.id && typeof skill.mod === 'number') {
-                    skillsObj[skill.id] = { base: skill.mod };
-                }
-            }
-        } else {
-            // Otherwise fallback to Role defaults
-            if (this.roleKey === "skirmisher" || this.roleKey === "sniper") {
-                skillsObj.acr = { base: highSkillMod };
-                skillsObj.ste = { base: highSkillMod };
-            } else if (this.roleKey === "spellcaster") {
-                skillsObj.arc = { base: highSkillMod };
-                skillsObj.occ = { base: highSkillMod };
-                skillsObj.med = { base: highSkillMod };
-            } else {
-                // Brute / Soldier
-                skillsObj.ath = { base: highSkillMod };
-                skillsObj.itm = { base: highSkillMod };
+        // Apply Theme Tweaks
+        if (this.theme.statTweaks) {
+            if (this.theme.statTweaks.hp) hpVal += this.theme.statTweaks.hp;
+            if (this.theme.statTweaks.ac) acVal += this.theme.statTweaks.ac;
+            if (this.theme.statTweaks.saves) {
+                fortVal += this.theme.statTweaks.saves;
+                refVal += this.theme.statTweaks.saves;
+                willVal += this.theme.statTweaks.saves;
             }
         }
 
-        // Calculate Ability Modifiers
-        const primaryMod = Math.max(1, Math.floor(this.level / 4) + 3);
-        const secondaryMod = Math.max(0, primaryMod - 2);
-        const averageMod = Math.max(0, Math.floor(this.level / 5));
-
-        const abilitiesObj = {
-            str: { mod: averageMod },
-            dex: { mod: averageMod },
-            con: { mod: averageMod },
-            int: { mod: averageMod },
-            wis: { mod: averageMod },
-            cha: { mod: averageMod }
-        };
-
-        if (this.roleKey === "brute" || this.roleKey === "soldier") {
-            abilitiesObj.str.mod = primaryMod;
-            abilitiesObj.con.mod = secondaryMod;
-        } else if (this.roleKey === "skirmisher" || this.roleKey === "sniper") {
-            abilitiesObj.dex.mod = primaryMod;
-            abilitiesObj.wis.mod = secondaryMod;
-        } else if (this.roleKey === "spellcaster") {
-            abilitiesObj.int.mod = primaryMod; // Alternatively CHA/WIS based on tradition, but INT is a safe base.
-            abilitiesObj.cha.mod = secondaryMod;
-        }
-
-        const baseStats = {
-            details: {
-                level: { value: this.level }
-            },
+        const system = {
             attributes: {
-                hp: {
-                    value: hpVal,
-                    max: hpVal,
-                    temp: 0,
-                    details: ""
-                },
-                ac: {
-                    value: acVal,
-                    details: ""
-                }
+                hp: { value: hpVal, max: hpVal },
+                ac: { value: acVal },
+                speed: { value: this.ancestry.speed }
             },
             saves: {
-                fortitude: { value: fortVal, saveDetail: "" },
-                reflex: { value: refVal, saveDetail: "" },
-                will: { value: willVal, saveDetail: "" }
-            },
-            skills: skillsObj,
-            abilities: abilitiesObj
+                fortitude: { value: fortVal },
+                reflex: { value: refVal },
+                will: { value: willVal }
+            }
         };
 
-        if (this.templateAdjustment) {
-            baseStats.attributes.adjustment = this.templateAdjustment; // "elite" or "weak"
+        // Add Senses
+        const senses = [];
+        if (this.ancestry.senses) senses.push({ type: this.ancestry.senses.toLowerCase().replace(" ", ""), label: this.ancestry.senses });
+        if (this.theme.senses) senses.push({ type: this.theme.senses.toLowerCase().replace(" ", ""), label: this.theme.senses });
+        if (senses.length > 0) system.attributes.perception = { senses: senses };
+
+        // Resistances / Weaknesses
+        if (this.theme.resistances) {
+            system.attributes.resistances = this.theme.resistances.map(r => ({
+                type: r.type,
+                value: r.value === "Level" ? this.level : r.value
+            }));
+        }
+        if (this.theme.weaknesses) {
+            system.attributes.weaknesses = this.theme.weaknesses.map(w => ({
+                type: w.type,
+                value: w.value === "Level" ? this.level : w.value
+            }));
         }
 
-        return baseStats;
+        return system;
     }
 
     _generateBaseStrike() {
-        const attackBonus = STAT_TABLES.attack[this.roleTemplate.attack][this.levelIndex];
+        let attackBonus = STAT_TABLES.attack[this.roleTemplate.attack][this.levelIndex];
         const damageFormula = STAT_TABLES.damage[this.roleTemplate.damage][this.levelIndex];
+        const damageType = this.theme.damageType || "bludgeoning";
+
+        if (this.theme.statTweaks?.attack) attackBonus += this.theme.statTweaks.attack;
 
         return {
-            name: "Default Strike",
+            name: this.theme.damageType ? `${this.theme.name} Strike` : "Default Strike",
             type: "melee",
             system: {
                 damageRolls: {
-                    damage1: { damage: damageFormula, damageType: "bludgeoning" }
+                    damage1: { damage: damageFormula, damageType: damageType }
                 },
                 bonus: { value: attackBonus },
                 weaponType: { value: "simple" },
@@ -196,314 +176,132 @@ export class EntityBuilder {
     }
 
     _generateSpellcastingEntry() {
-        const dcVal = STAT_TABLES.spellDC[this.roleTemplate.spellDC][this.levelIndex];
-        const attackVal = STAT_TABLES.attack.high[this.levelIndex]; // Assume high relative attack for casters
+          const dcVal = STAT_TABLES.spellDC[this.roleTemplate.spellDC][this.levelIndex];
+          const attackVal = STAT_TABLES.attack.high[this.levelIndex];
 
-        return {
-            name: `${this.spellTradition.charAt(0).toUpperCase() + this.spellTradition.slice(1)} Spells`,
-            type: "spellcastingEntry",
-            system: {
-                spelldc: { dc: dcVal, value: attackVal, mod: 0 },
-                tradition: { value: this.spellTradition },
-                prepared: {
-                    value: this.spellcastingType,
-                    flexible: false,
-                    validPriorities: this.spellcastingType === "prepared" ? [] : [0]
-                },
-                showSlotlessLevels: { value: false },
-                slots: this._generateSpellSlots()
-            }
-        }
-    }
-
-    _generateSpellSlots() {
-        const slots = {};
-        // innate doesn't use slots on the entry level
-        if (this.spellcastingType === "innate") return slots;
-
-        // Max rank is roughly half level rounded up
-        const maxRank = Math.max(1, Math.ceil(this.level / 2));
-        for (let r = 1; r <= 10; r++) {
-            // Standard NPC caster might get 3 slots per level up to their max rank
-            if (r <= maxRank) {
-                slots[`slot${r}`] = { max: 3, value: 3 };
-            } else {
-                slots[`slot${r}`] = { max: 0, value: 0 };
-            }
-        }
-        return slots;
+          return {
+             name: "Innate Spells",
+             type: "spellcastingEntry",
+             system: {
+                 spelldc: { dc: dcVal, value: attackVal, mod: 0 },
+                 tradition: { value: "arcane" },
+                 prepared: { value: "innate" },
+                 showSlotlessLevels: { value: false }
+             }
+          }
     }
 
     async _findItemInCompendium(compendiumKey, itemName) {
         const pack = game.packs.get(compendiumKey);
-        if (!pack) {
-            console.warn(`PF2e NPC Gen | Compendium ${compendiumKey} not found.`);
-            return null;
-        }
-
-        // Use the index for fast searching by name
-        const index = await pack.getIndex({ fields: ["name", "type", "system.level.value", "system.traits.value", "system.spellType"] });
-
-        // Find exact match (case-insensitive for robustness)
+        if (!pack) return null;
+        const index = await pack.getIndex({fields: ["name", "type"]});
         const match = index.find(entry => entry.name.toLowerCase() === itemName.toLowerCase());
-
-        if (match) {
-            return await pack.getDocument(match._id);
-        }
+        if (match) return await pack.getDocument(match._id);
         return null;
     }
 
     async _generateEquipment() {
-        const items = [];
-
-        // If AI explicitly requested equipment, use ONLY that equipment.
-        if (this.customEquipment.length > 0) {
-            // Define packs to search for gear
-            const packsToSearch = ["pf2e.equipment-srd", "pf2e.pathfinder-society-boons", "pf2e.gm-core-srd"];
-
-            for (const itemName of this.customEquipment) {
-                // Handle "Gold" or "Coins" specifically if we want, but PF2e has coin items
-                try {
-                    let itemDoc = null;
-                    for (const packPrefix of packsToSearch) {
-                        if (!itemDoc) {
-                            itemDoc = await this._findItemInCompendium(packPrefix, itemName);
-                        }
-                    }
-
-                    if (itemDoc) {
-                        const itemData = itemDoc.toObject();
-                        // Auto-equip armor
-                        if (itemData.type === 'armor') {
-                            itemData.system.equipped = { inSlot: true };
-                        }
-
-                        // Roughly scale weapon runes based on level
-                        if (itemData.type === 'weapon') {
-                            const potency = Math.floor(this.level / 4);
-                            const striking = Math.floor((this.level - 1) / 3);
-                            itemData.system.potencyRune = { value: Math.max(0, Math.min(3, potency)) };
-                            itemData.system.strikingRune = { value: Math.max(0, Math.min(3, striking)) };
-                        }
-                        items.push(itemData);
-                    } else {
-                        console.warn(`PF2e NPC Gen | AI requested Equipment '${itemName}' not found in any standard equipment comps.`);
-                    }
-                } catch (e) {
-                    console.error(`PF2e NPC Gen | Error fetching AI equipment ${itemName}:`, e);
-                }
-            }
-            return items;
-        }
-
-        // Fallback to randomized equipment table
         const prefs = ROLE_EQUIPMENT_PREFS[this.roleKey] || ROLE_EQUIPMENT_PREFS["brute"];
+        const items = [];
         let weaponCategory = BASIC_EQUIPMENT.weapons.melee;
-        if (prefs.weapon === 'bows') {
-            weaponCategory = BASIC_EQUIPMENT.weapons.ranged;
-        }
+        if (prefs.weapon === 'bows') weaponCategory = BASIC_EQUIPMENT.weapons.ranged;
 
         const weaponList = weaponCategory[prefs.weapon] || weaponCategory.simple;
         const chosenWeaponName = weaponList[Math.floor(Math.random() * weaponList.length)];
-
-        // Armor
         const armorList = BASIC_EQUIPMENT.armor[prefs.armor] || BASIC_EQUIPMENT.armor.unarmored;
         const chosenArmorName = armorList[Math.floor(Math.random() * armorList.length)];
 
-        // Fetch the core items from the PF2e Compendium dynamically
         try {
             const weaponItem = await this._findItemInCompendium("pf2e.equipment-srd", chosenWeaponName);
             if (weaponItem) {
                 const weaponData = weaponItem.toObject();
-                // Override striking/potency runes based on level roughly
                 const potency = Math.floor(this.level / 4);
                 const striking = Math.floor((this.level - 1) / 3);
-
                 weaponData.system.potencyRune = { value: Math.max(0, Math.min(3, potency)) };
                 weaponData.system.strikingRune = { value: Math.max(0, Math.min(3, striking)) };
                 items.push(weaponData);
-            } else {
-                console.warn(`PF2e NPC Gen | Weapon '${chosenWeaponName}' not found in equipment-srd.`);
             }
-
             const armorItem = await this._findItemInCompendium("pf2e.equipment-srd", chosenArmorName);
             if (armorItem) {
-                const armorData = armorItem.toObject();
-                armorData.system.equipped.inSlot = true; // Auto-equip
-                items.push(armorData);
-            } else {
-                console.warn(`PF2e NPC Gen | Armor '${chosenArmorName}' not found in equipment-srd.`);
+                 const armorData = armorItem.toObject();
+                 armorData.system.equipped.inSlot = true;
+                 items.push(armorData);
             }
-        } catch (e) {
-            console.error("PF2e NPC Gen | Error fetching core equipment:", e);
-        }
-
-        // Add extra gear based on wealth/level (Approximation of GMG Encounter Treasure)
-        // Level 1-4: 1 minor item. Level 5-10: 2 items. Level 11+: 3 items.
-        let extraItemCount = 0;
-        if (this.level >= 1) extraItemCount = 1;
-        if (this.level >= 5) extraItemCount = 2;
-        if (this.level >= 11) extraItemCount = 3;
-
-        if (extraItemCount > 0) {
-            const pack = game.packs.get("pf2e.equipment-srd");
-            if (pack) {
-                const index = await pack.getIndex({ fields: ["name", "type", "system.level.value", "system.traits.value"] });
-
-                // Filter for valid treasure/consumables close to the NPC's level
-                const targetLevel = Math.max(1, this.level - 1);
-                const validLoot = index.filter(entry => {
-                    const isConsumable = entry.type === "consumable";
-                    const isEquipment = entry.type === "equipment";
-                    const isBackpack = entry.type === "backpack";
-
-                    if (!(isConsumable || isEquipment || isBackpack)) return false;
-
-                    const itemLevel = entry.system?.level?.value || 0;
-                    // Grab items around the NPC's level or slightly below
-                    return itemLevel > 0 && itemLevel <= targetLevel + 1 && itemLevel >= targetLevel - 3;
-                });
-
-                if (validLoot.length > 0) {
-                    for (let i = 0; i < extraItemCount; i++) {
-                        const randomLoot = validLoot[Math.floor(Math.random() * validLoot.length)];
-                        try {
-                            const lootDoc = await pack.getDocument(randomLoot._id);
-                            if (lootDoc) {
-                                items.push(lootDoc.toObject());
-                            }
-                        } catch (e) {
-                            console.error(`PF2e NPC Gen | Error fetching extra loot ${randomLoot.name}:`, e);
-                        }
-                    }
-                }
-            }
-        }
-
+        } catch (e) { console.error(e); }
         return items;
     }
 
     async _generateFeatures() {
         const items = [];
-
-        // If AI explicitly requested features, use ONLY those features
-        if (this.customFeatures.length > 0) {
-            for (const featureName of this.customFeatures) {
-                try {
-                    const featureEntity = await this._findItemInCompendium("pf2e.bestiary-ability-glossary-srd", featureName);
-                    if (featureEntity) {
-                        items.push(featureEntity.toObject());
-                    } else {
-                        console.warn(`PF2e NPC Gen | AI requested Feature '${featureName}' not found.`);
-                    }
-                } catch (e) {
-                    console.error(`PF2e NPC Gen | Error fetching AI feature: ${featureName}`, e);
-                }
-            }
-            return items;
-        }
-
-        // Fallback to randomized features based on role
         const potentialFeatures = ROLE_FEATURES[this.roleKey] || [];
-
         for (const feature of potentialFeatures) {
-            // Roll against the feature's chance to see if it's added
             if (Math.random() <= feature.chance) {
-                try {
-                    const featureEntity = await this._findItemInCompendium("pf2e.bestiary-ability-glossary-srd", feature.name);
-                    if (featureEntity) {
-                        items.push(featureEntity.toObject());
-                    } else {
-                        console.warn(`PF2e NPC Gen | Feature '${feature.name}' not found.`);
+                const entity = await this._findItemInCompendium("pf2e.bestiary-ability-glossary-srd", feature.name);
+                if (entity) items.push(entity.toObject());
+            }
+        }
+        const featPack = game.packs.get("pf2e.feats-srd");
+        if (featPack) {
+            const index = await featPack.getIndex({fields: ["name", "system.level.value", "system.traits.value"]});
+            const roleTraits = this._getTraitsForRole(this.roleKey);
+            const possibleFeats = index.filter(f => (f.system?.level?.value || 0) <= this.level && roleTraits.some(t => f.system?.traits?.value?.includes(t)));
+            if (possibleFeats.length > 0) {
+                const numFeats = Math.floor(Math.random() * 2) + 1;
+                for (let i = 0; i < numFeats; i++) {
+                    const match = possibleFeats[Math.floor(Math.random() * possibleFeats.length)];
+                    const featDoc = await featPack.getDocument(match._id);
+                    if (featDoc) {
+                        const featData = featDoc.toObject();
+                        if (!items.find(it => it.name === featData.name)) items.push(featData);
                     }
-                } catch (e) {
-                    console.error(`PF2e NPC Gen | Error fetching feature: ${feature.name}`, e);
                 }
             }
         }
-
         return items;
+    }
+
+    _getTraitsForRole(role) {
+        switch(role) {
+            case "brute": return ["fighter", "barbarian", "rage"];
+            case "skirmisher": return ["rogue", "swashbuckler", "finesse"];
+            case "spellcaster": return ["wizard", "sorcerer", "magical"];
+            case "sniper": return ["ranger", "archetype", "ranged"];
+            case "soldier": return ["fighter", "champion", "stance"];
+            default: return ["general"];
+        }
     }
 
     async _generateSpells(spellcastingEntryId) {
         const items = [];
         const pack = game.packs.get("pf2e.spells-srd");
-        if (!pack) {
-            console.warn("PF2e NPC Gen | spells-srd compendium not found.");
-            return items;
-        }
-
-        // If AI explicitly requested spells, fetch them directly
-        if (this.customSpells.length > 0) {
-            for (const spellName of this.customSpells) {
-                try {
-                    const spellDoc = await this._findItemInCompendium("pf2e.spells-srd", spellName);
-                    if (spellDoc) {
-                        const spellData = spellDoc.toObject();
-                        if (!spellData.system.location) {
-                            spellData.system.location = {};
-                        }
-                        spellData.system.location.value = spellcastingEntryId;
-                        items.push(spellData);
-                    } else {
-                        console.warn(`PF2e NPC Gen | AI requested Spell '${spellName}' not found.`);
-                    }
-                } catch (e) {
-                    console.error(`PF2e NPC Gen | Error fetching AI spell ${spellName}:`, e);
-                }
-            }
-            return items;
-        }
-
-        // Fallback: Randomly generate Spells from Compendium Index
-        const index = await pack.getIndex({ fields: ["name", "type", "system.level.value", "system.traits.value"] });
-
-        // Calculate max spell rank (half level rounded up)
+        if (!pack) return items;
+        const index = await pack.getIndex({fields: ["name", "system.level.value", "system.traits.value"]});
         const maxRank = Math.max(1, Math.ceil(this.level / 2));
+        const ranks = [0];
+        for (let r = 1; r <= maxRank; r++) ranks.push(r);
 
-        // Select roughly 2 cantrips and 1-2 spells per available rank
-        const ranksToPopulate = [0]; // 0 is Cantrip
-        for (let r = 1; r <= maxRank; r++) {
-            ranksToPopulate.push(r);
-        }
-
-        for (const targetRank of ranksToPopulate) {
-            // Filter index for arcane spells of the target rank
+        for (const targetRank of ranks) {
             const matchingSpells = index.filter(entry => {
                 const isCantrip = entry.system?.traits?.value?.includes("cantrip");
                 if (targetRank === 0 && !isCantrip) return false;
-                if (targetRank > 0 && isCantrip) return false;
-                if (targetRank > 0 && entry.system?.level?.value !== targetRank) return false;
-
-                // Filter based on the chosen tradition
-                if (!entry.system?.traits?.value?.includes(this.spellTradition)) return false;
-
-                return true;
+                if (targetRank > 0 && (isCantrip || entry.system?.level?.value !== targetRank)) return false;
+                return entry.system?.traits?.value?.includes("arcane");
             });
-
             if (matchingSpells.length === 0) continue;
-
-            const numSpellsToPick = targetRank === 0 ? 2 : Math.floor(Math.random() * 2) + 1; // 2 cantrips, 1-2 others
-
-            for (let i = 0; i < numSpellsToPick; i++) {
-                const randomMatch = matchingSpells[Math.floor(Math.random() * matchingSpells.length)];
+            const num = targetRank === 0 ? 2 : Math.floor(Math.random() * 2) + 1;
+            for (let i = 0; i < num; i++) {
+                const match = matchingSpells[Math.floor(Math.random() * matchingSpells.length)];
                 try {
-                    const spellDoc = await pack.getDocument(randomMatch._id);
-                    if (spellDoc) {
-                        const spellData = spellDoc.toObject();
-                        // Important: setting system.location.value to the spellcasting entry ID links it
-                        if (!spellData.system.location) {
-                            spellData.system.location = {};
-                        }
-                        spellData.system.location.value = spellcastingEntryId;
-                        items.push(spellData);
+                    const doc = await pack.getDocument(match._id);
+                    if (doc) {
+                        const data = doc.toObject();
+                        if (!data.system.location) data.system.location = {};
+                        data.system.location.value = spellcastingEntryId;
+                        items.push(data);
                     }
-                } catch (e) {
-                    console.error(`PF2e NPC Gen | Error fetching spell ${randomMatch.name}:`, e);
-                }
+                } catch (e) { console.error(e); }
             }
         }
-
         return items;
     }
 }

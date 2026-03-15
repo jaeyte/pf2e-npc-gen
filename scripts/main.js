@@ -14,33 +14,47 @@ Hooks.once("init", async () => {
         default: true
     });
 
-    // Register LLM API Key Setting
-    game.settings.register("pf2e-npc-gen", "llmApiKey", {
-        name: "LLM API Key (OpenAI/Gemini)",
-        hint: "Enter your API key here to enable the AI prompt generator feature.",
+    // AI Generator Settings
+    game.settings.register("pf2e-npc-gen", "aiProvider", {
+        name: "AI Provider",
+        hint: "Select the AI service for concept-based NPC generation.",
         scope: "world",
+        config: true,
+        type: String,
+        choices: {
+            "openai":    "OpenAI (GPT-4o)",
+            "anthropic": "Claude (Anthropic)",
+            "custom":    "Custom (OpenAI-compatible endpoint)"
+        },
+        default: "openai"
+    });
+
+    game.settings.register("pf2e-npc-gen", "aiApiKey", {
+        name: "AI API Key",
+        hint: "Your API key, stored locally in your browser only. NOTE: Claude (Anthropic) requires a CORS proxy when using browser-hosted Foundry — use OpenAI or a local Ollama endpoint instead if unsure.",
+        scope: "client",
         config: true,
         type: String,
         default: ""
     });
-});
 
-// Add a button to the left-side Scene Controls (Token layer)
-Hooks.on("getSceneControlButtons", (controls) => {
-    if (!game.user.isGM) return;
+    game.settings.register("pf2e-npc-gen", "aiModel", {
+        name: "AI Model (optional)",
+        hint: "Override the default model. Leave blank to use the provider default. E.g. 'gpt-4o-mini', 'claude-opus-4-5'.",
+        scope: "client",
+        config: true,
+        type: String,
+        default: ""
+    });
 
-    const tokenControls = controls.find(c => c.name === "token");
-    if (tokenControls) {
-        tokenControls.tools.push({
-            name: "generate-npc",
-            title: "Generate PF2e NPC",
-            icon: "fas fa-hammer",
-            button: true,
-            onClick: () => {
-                NPCGeneratorApp.render();
-            }
-        });
-    }
+    game.settings.register("pf2e-npc-gen", "aiCustomEndpoint", {
+        name: "Custom API Endpoint URL",
+        hint: "Full URL for a custom OpenAI-compatible endpoint or CORS proxy. Used when provider is set to 'Custom'. E.g. 'http://localhost:11434/v1/chat/completions' for Ollama.",
+        scope: "client",
+        config: true,
+        type: String,
+        default: ""
+    });
 });
 
 // Create Toolbar Button Hook

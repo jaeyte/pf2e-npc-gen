@@ -1,66 +1,124 @@
 <div class="pf2e-npc-gen-app-content">
-  
-  <section class="pf2e-generator-card manual-card">
-    <header class="card-header">
-      <h3><i class="fas fa-hammer"></i> Manual Generation</h3>
-      <p class="subtitle">Precisely control the core mechanics of the generated NPC.</p>
-    </header>
-    
-    <div class="card-content">
+  <nav class="pf2e-npc-gen-tabs">
+    <div class="tab-item active" data-tab="npc">NPC Generator</div>
+    <div class="tab-item" data-tab="loot">Loot Generator</div>
+    <div class="tab-item" data-tab="ai">AI Generator</div>
+  </nav>
+
+  <div class="pf2e-npc-gen-body">
+    <!-- NPC Tab -->
+    <section class="tab-content active" data-tab="npc">
       <div class="form-group">
-        <label for="npc-level"><i class="fas fa-sort-numeric-up-alt"></i> Level</label>
+        <label for="npc-level">Target Level</label>
         <div class="form-fields">
-          <input type="number" name="level" id="npc-level" value="{{level}}" min="-1" max="25" required>
+          <input type="number" name="level" id="npc-level" value="{{level}}" min="-1" max="25">
         </div>
+        <p class="notes">Scale statistics to this level (-1 to 25).</p>
       </div>
 
       <div class="form-group">
-        <label for="npc-role"><i class="fas fa-theater-masks"></i> Concept</label>
+        <label for="npc-role">Concept/Role</label>
         <div class="form-fields">
           <select name="role" id="npc-role">
             {{selectOptions roles selected=role localize=true}}
           </select>
         </div>
+        <p class="notes">Determines the focus of the base statistics.</p>
       </div>
 
       <div class="form-group">
-        <label><i class="fas fa-balance-scale"></i> Adjustments</label>
-        <div class="form-fields adjustments-group">
-          <label class="checkbox-label"><input type="checkbox" name="templateElite" id="template-elite"> Elite (+1)</label>
-          <label class="checkbox-label"><input type="checkbox" name="templateWeak" id="template-weak"> Weak (-1)</label>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="generate-equipment"><i class="fas fa-khanda"></i> Equipment</label>
+        <label for="npc-ancestry">Ancestry</label>
         <div class="form-fields">
-          <label class="checkbox-label">
-            <input type="checkbox" name="generateEquipment" id="generate-equipment" {{checked generateEquipment}}>
-            Auto-generate appropriate gear
-          </label>
+          <select name="ancestry" id="npc-ancestry">
+            <option value="random">Random Ancestry</option>
+            {{selectOptions ancestries selected=ancestry localize=true}}
+          </select>
         </div>
       </div>
-    </div>
-  </section>
 
-  <div class="section-divider">
-    <span>OR</span>
+      <div class="form-group">
+        <label for="npc-theme">Thematic Template</label>
+        <div class="form-fields">
+          <select name="theme" id="npc-theme">
+            {{selectOptions themes selected=theme localize=true}}
+          </select>
+        </div>
+        <p class="notes">Apply a mechanical and flavor overlay (e.g., Infernal, Undead).</p>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" name="generateEquipment" id="generate-equipment" {{checked generateEquipment}}>
+          Generate Standard Equipment
+        </label>
+      </div>
+
+      <button class="generate-btn" id="generate-npc-btn">
+        <i class="fas fa-hammer"></i> Create NPC
+      </button>
+    </section>
+
+    <!-- Loot Tab -->
+    <section class="tab-content" data-tab="loot">
+      <div class="form-group">
+        <label for="loot-level">Encounter Level</label>
+        <div class="form-fields">
+          <input type="number" name="lootLevel" id="loot-level" value="{{level}}" min="1" max="25">
+        </div>
+        <p class="notes">Determines the value and quality of the generated loot.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="loot-type">Loot Type</label>
+        <div class="form-fields">
+          <select name="lootType" id="loot-type">
+            <option value="hoard">Treasure Hoard (Mixed)</option>
+            <option value="consumables">Consumables Only (Potions/Scrolls)</option>
+            <option value="permanent">Permanent Items Only</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="generate-btn" id="generate-loot-btn">
+        <i class="fas fa-coins"></i> Generate Loot
+      </button>
+    </section>
+
+    <!-- AI Generator Tab -->
+    <section class="tab-content" data-tab="ai">
+      <div class="form-group">
+        <label for="ai-concept">NPC Concept</label>
+        <div class="form-fields">
+          <textarea name="aiConcept" id="ai-concept" rows="3"
+            placeholder="e.g. veteran fire cult lieutenant, elven spy master, goblin pirate captain..."></textarea>
+        </div>
+        <p class="notes">Describe freely. The AI infers role, ancestry, theme, and level.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="ai-level">Level Override (optional)</label>
+        <div class="form-fields">
+          <input type="number" name="aiLevel" id="ai-level" placeholder="AI decides" min="-1" max="25">
+        </div>
+        <p class="notes">Leave blank to let the AI infer the level from your description.</p>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="ai-generate-equipment" checked>
+          Generate Standard Equipment
+        </label>
+      </div>
+
+      <div class="ai-loading" id="ai-loading" style="display:none;">
+        <i class="fas fa-spinner fa-spin"></i> Asking the AI...
+      </div>
+
+      <div class="ai-error" id="ai-error" style="display:none;"></div>
+
+      <button class="generate-btn" id="generate-ai-npc-btn">
+        <i class="fas fa-brain"></i> Generate with AI
+      </button>
+    </section>
   </div>
-
-  <section class="pf2e-generator-card ai-card">
-    <header class="card-header">
-      <h3><i class="fas fa-robot"></i> AI Prompt Generation</h3>
-      <p class="subtitle">Describe your NPC and let the LLM handle the stats.</p>
-    </header>
-
-    <div class="card-content">
-      <div class="form-group stacked">
-        <div class="form-fields">
-          <textarea name="aiPrompt" id="ai-prompt" rows="3" placeholder="e.g., 'A stealthy level 4 goblin assassin with poison daggers.'"></textarea>
-        </div>
-        <p class="notes warning"><i class="fas fa-exclamation-triangle"></i> Prompts override all manual selections above.</p>
-      </div>
-    </div>
-  </section>
-
 </div>
