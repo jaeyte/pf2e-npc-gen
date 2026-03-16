@@ -21,7 +21,7 @@ There are three tools in one dialog, opened from a button in your Actors sidebar
 
 ## Installation
 
-Install from the Foundry module browser, or paste the manifest URL directly:
+Paste this manifest URL into Foundry's **Install Module** dialog:
 
 ```
 https://raw.githubusercontent.com/jaeyte/pf2e-npc-gen/main/module.json

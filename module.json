@@ -24,6 +24,9 @@
       }
     ]
   },
+  "url": "https://github.com/jaeyte/pf2e-npc-gen",
+  "manifest": "https://raw.githubusercontent.com/jaeyte/pf2e-npc-gen/main/module.json",
+  "download": "https://github.com/jaeyte/pf2e-npc-gen/archive/refs/heads/main.zip",
   "esmodules": ["scripts/main.js"],
   "scripts": [],
   "styles": ["styles/module.css"],
