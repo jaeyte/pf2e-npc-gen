@@ -1,8 +1,8 @@
 <div class="pf2e-npc-gen-app-content">
   <nav class="pf2e-npc-gen-tabs">
-    <div class="tab-item active" data-tab="npc">NPC Generator</div>
-    <div class="tab-item" data-tab="loot">Loot Generator</div>
-    <div class="tab-item" data-tab="ai">AI Generator</div>
+    <div class="tab-item active" data-tab="npc" data-action="switchTab">NPC Generator</div>
+    <div class="tab-item" data-tab="loot" data-action="switchTab">Loot Generator</div>
+    <div class="tab-item" data-tab="ai" data-action="switchTab">AI Generator</div>
   </nav>
 
   <div class="pf2e-npc-gen-body">
@@ -20,7 +20,7 @@
         <label for="npc-role">Concept/Role</label>
         <div class="form-fields">
           <select name="role" id="npc-role">
-            {{selectOptions roles selected=role localize=true}}
+            {{selectOptions roles selected=role}}
           </select>
         </div>
         <p class="notes">Determines the focus of the base statistics.</p>
@@ -31,7 +31,7 @@
         <div class="form-fields">
           <select name="ancestry" id="npc-ancestry">
             <option value="random">Random Ancestry</option>
-            {{selectOptions ancestries selected=ancestry localize=true}}
+            {{selectOptions ancestries selected=ancestry}}
           </select>
         </div>
       </div>
@@ -40,7 +40,7 @@
         <label for="npc-theme">Thematic Template</label>
         <div class="form-fields">
           <select name="theme" id="npc-theme">
-            {{selectOptions themes selected=theme localize=true}}
+            {{selectOptions themes selected=theme}}
           </select>
         </div>
         <p class="notes">Apply a mechanical and flavor overlay (e.g., Infernal, Undead).</p>
@@ -53,7 +53,7 @@
         </label>
       </div>
 
-      <button class="generate-btn" id="generate-npc-btn">
+      <button class="generate-btn" id="generate-npc-btn" data-action="generateNPC">
         <i class="fas fa-hammer"></i> Create NPC
       </button>
     </section>
@@ -79,7 +79,7 @@
         </div>
       </div>
 
-      <button class="generate-btn" id="generate-loot-btn">
+      <button class="generate-btn" id="generate-loot-btn" data-action="generateLoot">
         <i class="fas fa-coins"></i> Generate Loot
       </button>
     </section>
@@ -116,7 +116,7 @@
 
       <div class="ai-error" id="ai-error" style="display:none;"></div>
 
-      <button class="generate-btn" id="generate-ai-npc-btn">
+      <button class="generate-btn" id="generate-ai-npc-btn" data-action="generateAINPC">
         <i class="fas fa-brain"></i> Generate with AI
       </button>
     </section>

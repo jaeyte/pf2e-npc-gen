@@ -4,7 +4,8 @@
   "version": "2.0.0",
   "compatibility": {
     "minimum": "13",
-    "verified": "13"
+    "verified": "13",
+    "maximum": "13"
   },
   "description": "A module to generate Pathfinder 2e NPCs complete with stats, features, and equipment based on role and level guidelines.",
   "authors": [
