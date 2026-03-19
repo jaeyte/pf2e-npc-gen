@@ -81,7 +81,7 @@ Hooks.on("renderActorDirectory", (app, html, data) => {
         // Add click listener
         generateButton.addEventListener("click", (evt) => {
             evt.preventDefault();
-            NPCGeneratorApp.render();
+            NPCGeneratorApp.show();
         });
 
         // Insert underneath/alongside Create Actor
