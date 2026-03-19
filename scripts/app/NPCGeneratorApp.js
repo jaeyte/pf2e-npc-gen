@@ -36,6 +36,7 @@ export class NPCGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
     };
 
     async _prepareContext(options = {}) {
+        const context = await super._prepareContext(options);
         const ancestries = Object.entries(ANCESTRIES).reduce((acc, [key, val]) => {
             acc[key] = val.name;
             return acc;
@@ -46,7 +47,7 @@ export class NPCGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
             return acc;
         }, {});
 
-        return {
+        return foundry.utils.mergeObject(context, {
             level: 1,
             roles: {
                 "brute": "Brute (High HP, High Damage)",
@@ -61,7 +62,7 @@ export class NPCGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
             themes: themes,
             theme: "none",
             generateEquipment: true
-        };
+        });
     }
 
     static #onSwitchTab(event, target) {
