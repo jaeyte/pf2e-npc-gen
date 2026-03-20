@@ -48,7 +48,8 @@ export const ROLE_TEMPLATES = {
         reflex: "low",
         will: "low",
         attack: "moderate",
-        damage: "high"
+        damage: "high",
+        abilityMods: { str: 4, dex: 1, con: 3, int: -1, wis: 0, cha: 0 }
     },
     skirmisher: {
         hp: "moderate",
@@ -57,7 +58,8 @@ export const ROLE_TEMPLATES = {
         reflex: "high",
         will: "low",
         attack: "high",
-        damage: "moderate"
+        damage: "moderate",
+        abilityMods: { str: 2, dex: 4, con: 1, int: 0, wis: 1, cha: 0 }
     },
     sniper: {
         hp: "low",
@@ -66,7 +68,8 @@ export const ROLE_TEMPLATES = {
         reflex: "high",
         will: "moderate",
         attack: "high",
-        damage: "high"
+        damage: "high",
+        abilityMods: { str: 1, dex: 4, con: 0, int: 1, wis: 2, cha: 0 }
     },
     spellcaster: {
         hp: "low",
@@ -76,7 +79,8 @@ export const ROLE_TEMPLATES = {
         will: "high",
         attack: "low",
         damage: "low",
-        spellDC: "high"
+        spellDC: "high",
+        abilityMods: { str: -1, dex: 1, con: 0, int: 4, wis: 3, cha: 2 }
     },
     soldier: {
         hp: "high",
@@ -85,6 +89,7 @@ export const ROLE_TEMPLATES = {
         reflex: "moderate",
         will: "moderate",
         attack: "high",
-        damage: "moderate"
+        damage: "moderate",
+        abilityMods: { str: 3, dex: 1, con: 3, int: 0, wis: 1, cha: 0 }
     }
 }
