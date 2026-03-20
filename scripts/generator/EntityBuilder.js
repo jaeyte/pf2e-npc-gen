@@ -48,12 +48,11 @@ export class EntityBuilder {
         let actorData = {
             name: actorName,
             type: "npc",
-            system: { 
+            system: {
                 ...this._generateBaseStats(),
                 details: {
                     level: { value: this.level },
-                    publicNotes: bio,
-                    biography: { value: bio }
+                    publicNotes: bio
                 }
             },
             items: []
@@ -86,7 +85,12 @@ export class EntityBuilder {
         const featureItems = await this._generateFeatures();
         actorData.items.push(...featureItems);
 
+        if (game.settings.get("pf2e-npc-gen", "logGeneration")) {
+            console.log("PF2e NPC Gen | Actor data:", JSON.parse(JSON.stringify(actorData)));
+        }
+
         const newActor = await Actor.create(actorData);
+        console.log("PF2e NPC Gen | Created actor:", newActor?.id, newActor?.name);
         return newActor;
     }
 
@@ -132,11 +136,12 @@ export class EntityBuilder {
             }
         };
 
-        // Add Senses
+        // Add Perception & Senses
+        const perceptionMod = STAT_TABLES.saves[this.roleTemplate.will]?.[this.levelIndex] || 0;
         const senses = [];
-        if (this.ancestry.senses) senses.push({ type: this.ancestry.senses.toLowerCase().replace(" ", ""), label: this.ancestry.senses });
-        if (this.theme.senses) senses.push({ type: this.theme.senses.toLowerCase().replace(" ", ""), label: this.theme.senses });
-        if (senses.length > 0) system.attributes.perception = { senses: senses };
+        if (this.ancestry.senses) senses.push({ type: this.ancestry.senses.toLowerCase().replace(/\s+/g, "-") });
+        if (this.theme.senses) senses.push({ type: this.theme.senses.toLowerCase().replace(/\s+/g, "-") });
+        system.perception = { value: perceptionMod, senses: senses };
 
         // Resistances / Weaknesses
         if (this.theme.resistances) {
