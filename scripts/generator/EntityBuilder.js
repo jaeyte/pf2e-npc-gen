@@ -72,7 +72,7 @@ export class EntityBuilder {
                     cha: { value: modToScore(this.roleTemplate.abilityMods?.cha) }
                 },
                 attributes: {
-                    speed: { value: this.ancestry.speed },
+                    speed: { value: this.ancestry.speed, otherSpeeds: [] },
                     hp: {},
                     immunities: [],
                     resistances: [],
