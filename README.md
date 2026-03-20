@@ -2,7 +2,7 @@
 
 A Foundry VTT module for Pathfinder 2e that generates combat-ready NPCs and encounter loot on the fly. Stats are pulled directly from the Gamemastery Guide tables, so everything that comes out is properly balanced for your party's level.
 
-![Version 2.3.2](https://img.shields.io/badge/version-2.3.2-green)
+![Version 2.3.3](https://img.shields.io/badge/version-2.3.3-green)
 ![Foundry v13](https://img.shields.io/badge/Foundry-v13-informational)
 ![PF2e 6.0+](https://img.shields.io/badge/PF2e-6.0%2B-blueviolet)
 
