@@ -1,8 +1,8 @@
 # PF2e NPC & Loot Generator
 
-A Foundry VTT module for Pathfinder 2e that generates combat-ready NPCs and encounter loot on the fly. Stats are pulled directly from the Gamemastery Guide tables, so everything that comes out is properly balanced for your party's level.
+A Foundry VTT module for Pathfinder 2e that generates combat-ready characters and encounter loot on the fly. Characters are built as full PC-type actors with real classes, ancestries, heritages, backgrounds, feats, equipment, and spells pulled from the PF2e compendiums. Everything uses the standard character sheet so gear, spells, and feats are fully interactive.
 
-![Version 2.3.5](https://img.shields.io/badge/version-2.3.5-green)
+![Version 3.0.0](https://img.shields.io/badge/version-3.0.0-green)
 ![Foundry v13](https://img.shields.io/badge/Foundry-v13-informational)
 ![PF2e 6.0+](https://img.shields.io/badge/PF2e-6.0%2B-blueviolet)
 
@@ -12,9 +12,9 @@ A Foundry VTT module for Pathfinder 2e that generates combat-ready NPCs and enco
 
 There are three tools in one dialog, opened from a button in your Actors sidebar:
 
-**NPC Generator** — Pick a level, role, ancestry, and thematic template. Hit create and a fully-statted NPC shows up in your sidebar ready to drag into a scene.
+**Character Generator** — Pick a level, role, ancestry, and thematic template. Hit create and a fully-built PC-type character shows up in your sidebar with a proper character sheet, equipped gear, feats, and spells ready to go.
 
-**AI Generator** — Type a concept in plain English. The AI figures out the role, ancestry, theme, and level for you, writes a biography, and the module builds the stat block. Good for when you need something specific in a hurry.
+**AI Generator** — Type a concept in plain English. The AI figures out the role, ancestry, theme, and level for you, writes a biography, and the module builds the full character. Good for when you need something specific in a hurry.
 
 **Loot Generator** — Set an encounter level and loot type, get a populated loot actor with items and gold pulled from the SRD.
 
@@ -32,17 +32,17 @@ https://raw.githubusercontent.com/jaeyte/pf2e-npc-gen/main/module.json
 
 ---
 
-## NPC Generator
+## Character Generator
 
-Roles determine the stat spread. Ancestries add traits, senses, and minor stat adjustments. Thematic templates layer on top of both.
+Roles map to actual PF2e classes. Each generated character gets a real ancestry, heritage, background, class, feats, equipment, and (for spellcasters) a prepared spellbook.
 
-| Role | Stat Focus |
-|------|-----------|
-| Brute | High HP and damage, lower AC |
-| Skirmisher | High AC and Reflex, mobile melee |
-| Spellcaster | High Will and spell DC, low HP |
-| Sniper | High Reflex and ranged attack/damage |
-| Soldier | High HP, AC, and Fortitude |
+| Role | PF2e Class | Focus |
+|------|-----------|-------|
+| Brute | Barbarian | High HP and damage, lower AC |
+| Skirmisher | Rogue | High AC and Reflex, mobile melee |
+| Spellcaster | Wizard | High Will and spell DC, prepared arcane spells |
+| Sniper | Ranger | High Reflex and ranged attack/damage |
+| Soldier | Fighter | High HP, AC, and Fortitude |
 
 | Theme | What it adds |
 |-------|-------------|
@@ -56,7 +56,7 @@ Roles determine the stat spread. Ancestries add traits, senses, and minor stat a
 
 ## AI Generator
 
-The AI reads your concept and decides the role, ancestry, theme, and level. The stat block is still built from the GMG tables — the AI handles interpretation and flavor, not the math.
+The AI reads your concept and decides the role, ancestry, theme, and level. The character is still built using real PF2e compendium data — the AI handles interpretation and flavor, not the mechanics.
 
 **To get started:**
 
@@ -66,13 +66,18 @@ The AI reads your concept and decides the role, ancestry, theme, and level. The 
 
 ### Choosing a provider
 
-**OpenAI** is the easiest option for most setups. The API supports browser-based requests with no extra configuration.
-- Get a key at [platform.openai.com](https://platform.openai.com)
-- Default model: `gpt-4o-mini`
+#### Free options
 
-**Claude (Anthropic)** works great but has a limitation: Anthropic's API blocks direct browser requests (CORS policy). If you're running Foundry as a desktop app this isn't an issue. If you're on a hosted server, you'll need to route through a proxy — point the **Custom** provider at it.
+**Groq** is the recommended free option. Fast inference with generous free-tier limits.
+- Sign up at [console.groq.com](https://console.groq.com) — free API key, no credit card required
+- Default model: `llama-3.3-70b-versatile` (excellent for structured JSON output)
 
-**Custom / Local** covers anything OpenAI-compatible: Ollama, LM Studio, a self-hosted proxy, etc. Set the provider to *Custom* and enter the full endpoint URL.
+**OpenRouter** aggregates many models including free ones. Good if you want to experiment with different models.
+- Sign up at [openrouter.ai](https://openrouter.ai) — free API key, free models available
+- Default model: `meta-llama/llama-3.3-70b-instruct:free`
+- Browse free models at openrouter.ai/models (filter by "free")
+
+**Ollama / LM Studio** — run models locally for free with zero API costs. Set the provider to *Custom* and enter the endpoint URL:
 
 ```
 Ollama:    http://localhost:11434/v1/chat/completions
@@ -80,6 +85,14 @@ LM Studio: http://localhost:1234/v1/chat/completions
 ```
 
 If you're using a local model, set the **AI Model** field to whatever your server expects (`llama3`, `mistral`, etc.).
+
+#### Paid options
+
+**OpenAI** is the easiest paid option. The API supports browser-based requests with no extra configuration.
+- Get a key at [platform.openai.com](https://platform.openai.com)
+- Default model: `gpt-4o-mini`
+
+**Claude (Anthropic)** works great but has a limitation: Anthropic's API blocks direct browser requests (CORS policy). If you're running Foundry as a desktop app this isn't an issue. If you're on a hosted server, you'll need to route through a proxy — point the **Custom** provider at it.
 
 ### Module settings reference
 

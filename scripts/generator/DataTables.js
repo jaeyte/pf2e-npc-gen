@@ -39,7 +39,34 @@ export const STAT_TABLES = {
     }
 }
 
-// Maps roles to their preferred statistical arrays
+// Maps generator roles to actual PF2e class names (for compendium lookup)
+export const ROLE_CLASS_MAP = {
+    brute:       "Barbarian",
+    skirmisher:  "Rogue",
+    sniper:      "Ranger",
+    spellcaster: "Wizard",
+    soldier:     "Fighter"
+};
+
+// Maps generator roles to PF2e backgrounds that fit thematically
+export const ROLE_BACKGROUND_MAP = {
+    brute:       "Warrior",
+    skirmisher:  "Criminal",
+    sniper:      "Hunter",
+    spellcaster: "Scholar",
+    soldier:     "Guard"
+};
+
+// Maps ancestry keys to PF2e heritage names (default heritages)
+export const ANCESTRY_HERITAGE_MAP = {
+    human:  "Versatile Human",
+    elf:    "Woodland Elf",
+    dwarf:  "Forge Dwarf",
+    orc:    "Badlands Orc",
+    goblin: "Charhide Goblin"
+};
+
+// Maps roles to their preferred statistical arrays (used for reference/fallback)
 export const ROLE_TEMPLATES = {
     brute: {
         hp: "high",

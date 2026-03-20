@@ -22,11 +22,13 @@ Hooks.once("init", async () => {
         config: true,
         type: String,
         choices: {
-            "openai":    "OpenAI (GPT-4o)",
-            "anthropic": "Claude (Anthropic)",
-            "custom":    "Custom (OpenAI-compatible endpoint)"
+            "openai":      "OpenAI (GPT-4o)",
+            "anthropic":   "Claude (Anthropic)",
+            "groq":        "Groq (Free — Llama 3.3 70B)",
+            "openrouter":  "OpenRouter (Free models available)",
+            "custom":      "Custom (OpenAI-compatible endpoint)"
         },
-        default: "openai"
+        default: "groq"
     });
 
     game.settings.register("pf2e-npc-gen", "aiApiKey", {
@@ -76,7 +78,7 @@ Hooks.on("renderActorDirectory", (app, html, data) => {
         // Create the button manually
         const generateButton = document.createElement("button");
         generateButton.classList.add("pf2e-npc-generate-prompt");
-        generateButton.innerHTML = `<i class="fas fa-hammer"></i> Generate NPC`;
+        generateButton.innerHTML = `<i class="fas fa-hammer"></i> Generate Character`;
         
         // Add click listener
         generateButton.addEventListener("click", (evt) => {

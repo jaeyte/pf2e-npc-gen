@@ -1,6 +1,5 @@
-// Basic equipment UUIDs (assuming the standard PF2e compendiums)
-// Note: In a real environment, you'd want to query compendiums or use reliable UUIDs.
-// These are rough approximations for the purpose of the generator framework.
+// Equipment names matching the PF2e equipment-srd compendium exactly.
+// Organized by category and subcategory for role-based selection.
 
 export const BASIC_EQUIPMENT = {
     weapons: {
@@ -8,44 +7,70 @@ export const BASIC_EQUIPMENT = {
             finesse: [
                 "Rapier",
                 "Shortsword",
+                "Dagger"
             ],
             heavy: [
                 "Greatsword",
-                "Greataxe"
+                "Greataxe",
+                "Maul"
             ],
             simple: [
                 "Mace",
-                "Spear"
+                "Spear",
+                "Dagger"
             ]
         },
         ranged: {
             bows: [
                 "Shortbow",
-                "Longbow"
+                "Longbow",
+                "Composite Shortbow"
             ]
         }
     },
     armor: {
         light: [
-            "Leather Armor"
+            "Leather Armor",
+            "Studded Leather Armor"
         ],
         medium: [
             "Chain Shirt",
-            "Hide Armor"
+            "Hide Armor",
+            "Breastplate"
         ],
         heavy: [
-            "Full Plate"
+            "Full Plate",
+            "Half Plate"
         ],
         unarmored: [
             "Explorer's Clothing"
+        ]
+    },
+    shields: [
+        "Wooden Shield",
+        "Steel Shield"
+    ],
+    adventuringGear: [
+        "Backpack",
+        "Bedroll",
+        "Rope",
+        "Torch",
+        "Waterskin",
+        "Rations"
+    ],
+    consumables: {
+        healing: [
+            "Minor Healing Potion",
+            "Lesser Healing Potion",
+            "Moderate Healing Potion"
         ]
     }
 };
 
 export const ROLE_EQUIPMENT_PREFS = {
-    brute: { weapon: 'heavy', armor: 'heavy' },
-    skirmisher: { weapon: 'finesse', armor: 'light' },
-    sniper: { weapon: 'bows', armor: 'light' },
-    spellcaster: { weapon: 'simple', armor: 'unarmored' },
-    soldier: { weapon: 'simple', armor: 'medium' }  
+    brute:       { weapon: "heavy",   armor: "medium", shield: false, ammo: false },
+    skirmisher:  { weapon: "finesse", armor: "light",  shield: false, ammo: false },
+    sniper:      { weapon: "bows",    armor: "light",  shield: false, ammo: true },
+    spellcaster: { weapon: "simple",  armor: "unarmored", shield: false, ammo: false },
+    soldier:     { weapon: "simple",  armor: "heavy",  shield: true,  ammo: false }
 };

@@ -91,26 +91,26 @@ export class NPCGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const theme = form.querySelector("#npc-theme")?.value || "none";
         const genEquipment = form.querySelector("#generate-equipment")?.checked ?? true;
 
-        ui.notifications.info(`Generating Level ${level} ${ancestry} ${role}...`);
+        ui.notifications.info(`Generating Level ${level} ${ancestry} ${role} character...`);
 
         try {
             const builder = new EntityBuilder(level, role, genEquipment, ancestry, theme);
             const newActor = await builder.generateNPC();
             if (newActor) {
-                ui.notifications.info(`Created NPC: ${newActor.name}`);
+                ui.notifications.info(`Created character: ${newActor.name}`);
                 app.close();
-                // Delay sheet render to ensure actor is fully initialized
+                // Delay sheet render to ensure PC actor is fully initialized
                 setTimeout(() => {
                     try {
                         newActor.sheet.render(true, { force: true });
                     } catch (err) {
                         console.error("PF2e NPC Gen | Sheet render error:", err);
                     }
-                }, 250);
+                }, 500);
             }
         } catch (error) {
-            console.error("PF2e NPC Gen | NPC Error:", error);
-            ui.notifications.error("Failed to generate NPC. Check the console (F12) for details.");
+            console.error("PF2e NPC Gen | Character Error:", error);
+            ui.notifications.error("Failed to generate character. Check the console (F12) for details.");
         }
     }
 
@@ -163,7 +163,7 @@ export class NPCGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
             const concept = await AIGeneratorService.generate(conceptText, optionalLevel);
 
             ui.notifications.info(
-                `AI: ${concept.ancestry} ${concept.role}, level ${concept.level}, theme: ${concept.theme}. Building NPC...`
+                `AI: ${concept.ancestry} ${concept.role}, level ${concept.level}, theme: ${concept.theme}. Building character...`
             );
 
             const builder = new EntityBuilder(
@@ -172,7 +172,14 @@ export class NPCGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 genEquipment,
                 concept.ancestry,
                 concept.theme,
-                { name: concept.name, biography: concept.biography, personality: concept.personality }
+                {
+                    name: concept.name,
+                    biography: concept.biography,
+                    personality: concept.personality,
+                    feats: concept.feats,
+                    spells: concept.spells,
+                    equipment: concept.equipment
+                }
             );
             const newActor = await builder.generateNPC();
 
@@ -185,7 +192,7 @@ export class NPCGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
                     } catch (err) {
                         console.error("PF2e NPC Gen | Sheet render error:", err);
                     }
-                }, 250);
+                }, 500);
             }
         } catch (error) {
             console.error("PF2e NPC Gen | AI Error:", error);
