@@ -22,7 +22,8 @@ export class EntityBuilder {
 
         this.generateEquipment = generateEquipment;
         this.levelIndex = this.level + 1;
-        this.overrides = overrides; // { name?, biography?, personality? } from AI generation
+        // { name?, biography?, personality?, feats?, spells?, equipment? }
+        this.overrides = overrides;
     }
 
     _getRandomKey(obj) {
@@ -121,7 +122,7 @@ export class EntityBuilder {
             actorData.items.push(...spellItems);
         }
 
-        // Add equipment (weapons, armor, shields, gear) — always for a ready character
+        // Add equipment (weapons, armor, shields, gear)
         if (this.generateEquipment) {
             const equipmentItems = await this._generateEquipment();
             actorData.items.push(...equipmentItems);
@@ -204,19 +205,38 @@ export class EntityBuilder {
         };
     }
 
+    /**
+     * Generate equipment. If AI provided specific choices (overrides.equipment),
+     * use those. Otherwise fall back to random role-based selection.
+     */
     async _generateEquipment() {
         const prefs = ROLE_EQUIPMENT_PREFS[this.roleKey] || ROLE_EQUIPMENT_PREFS["brute"];
+        const aiEquip = this.overrides.equipment;
         const items = [];
 
-        // Select weapon
-        let weaponCategory = BASIC_EQUIPMENT.weapons.melee;
-        if (prefs.weapon === "bows") weaponCategory = BASIC_EQUIPMENT.weapons.ranged;
-        const weaponList = weaponCategory[prefs.weapon] || weaponCategory.simple;
-        const chosenWeaponName = weaponList[Math.floor(Math.random() * weaponList.length)];
+        // Determine weapon name — AI choice or random from role prefs
+        let chosenWeaponName;
+        if (aiEquip?.weapon) {
+            chosenWeaponName = aiEquip.weapon;
+        } else {
+            let weaponCategory = BASIC_EQUIPMENT.weapons.melee;
+            if (prefs.weapon === "bows") weaponCategory = BASIC_EQUIPMENT.weapons.ranged;
+            const weaponList = weaponCategory[prefs.weapon] || weaponCategory.simple;
+            chosenWeaponName = weaponList[Math.floor(Math.random() * weaponList.length)];
+        }
 
-        // Select armor
-        const armorList = BASIC_EQUIPMENT.armor[prefs.armor] || BASIC_EQUIPMENT.armor.unarmored;
-        const chosenArmorName = armorList[Math.floor(Math.random() * armorList.length)];
+        // Determine armor name — AI choice or random from role prefs
+        let chosenArmorName;
+        if (aiEquip?.armor) {
+            chosenArmorName = aiEquip.armor;
+        } else {
+            const armorList = BASIC_EQUIPMENT.armor[prefs.armor] || BASIC_EQUIPMENT.armor.unarmored;
+            chosenArmorName = armorList[Math.floor(Math.random() * armorList.length)];
+        }
+
+        // Determine shield — AI choice or role pref
+        const wantsShield = aiEquip?.shield ? true : prefs.shield;
+        const shieldName = aiEquip?.shield || BASIC_EQUIPMENT.shields[Math.floor(Math.random() * BASIC_EQUIPMENT.shields.length)];
 
         try {
             // Weapon — equipped and held
@@ -252,8 +272,7 @@ export class EntityBuilder {
             }
 
             // Shield
-            if (prefs.shield) {
-                const shieldName = BASIC_EQUIPMENT.shields[Math.floor(Math.random() * BASIC_EQUIPMENT.shields.length)];
+            if (wantsShield) {
                 const shieldItem = await this._findItemInCompendium("pf2e.equipment-srd", shieldName);
                 if (shieldItem) {
                     const shieldData = shieldItem.toObject();
@@ -297,30 +316,44 @@ export class EntityBuilder {
     }
 
     /**
-     * Deterministically fill ALL feat slots based on character level.
-     * Calculates the exact number of class/ancestry/general/skill feats
-     * the character should have and picks that many from the tables.
+     * Fill ALL feat slots. If AI provided specific feat names (overrides.feats),
+     * look those up in the compendium. For any AI names that fail to match,
+     * or if no AI override exists, fall back to the random table-based approach.
      */
     async _generateFeats() {
         const items = [];
         const roleFeatData = ROLE_FEATS[this.roleKey];
         if (!roleFeatData) return items;
         const charLevel = Math.max(1, this.level);
+        const aiFeats = this.overrides.feats;
 
         /**
-         * For a given category, determine how many feat slots are available,
-         * filter the feat pool to level-appropriate options, shuffle, and
-         * pick exactly the right number (no more, no less).
+         * Look up a list of feat names in the compendium.
+         * Returns array of item data objects for matches found.
          */
-        const fillSlots = async (featPool, category, slotLevels) => {
-            const slotsNeeded = slotLevels.filter(l => l <= charLevel).length;
-            if (slotsNeeded === 0 || !featPool || featPool.length === 0) return;
+        const lookupFeatNames = async (names, category) => {
+            const found = [];
+            for (const name of names) {
+                const doc = await this._findItemInCompendium("pf2e.feats-srd", name);
+                if (doc) {
+                    const data = doc.toObject();
+                    if (data.system) data.system.category = category;
+                    found.push(data);
+                }
+            }
+            return found;
+        };
 
-            // Filter to feats the character qualifies for
+        /**
+         * Random fallback: shuffle eligible feats from table and pick to fill remaining slots.
+         */
+        const fillRemainingSlots = async (featPool, category, slotsNeeded, alreadyFilled) => {
+            const remaining = slotsNeeded - alreadyFilled;
+            if (remaining <= 0 || !featPool || featPool.length === 0) return;
+
             const eligible = featPool.filter(f => f.maxLevel <= charLevel);
-            // Shuffle so each generation is different
             const shuffled = this._shuffle(eligible);
-            const picked = shuffled.slice(0, slotsNeeded);
+            const picked = shuffled.slice(0, remaining);
 
             for (const feat of picked) {
                 const doc = await this._findItemInCompendium("pf2e.feats-srd", feat.name);
@@ -332,26 +365,37 @@ export class EntityBuilder {
             }
         };
 
-        // Class feats — fill every class feat slot
-        await fillSlots(roleFeatData.class, "class", FEAT_SLOT_LEVELS.class);
+        // Process each feat category
+        const categories = [
+            { key: "class",    pool: roleFeatData.class,                               slots: FEAT_SLOT_LEVELS.class },
+            { key: "ancestry", pool: roleFeatData.ancestry?.[this.ancestryKey] || [],   slots: FEAT_SLOT_LEVELS.ancestry },
+            { key: "general",  pool: roleFeatData.general,                             slots: FEAT_SLOT_LEVELS.general },
+            { key: "skill",    pool: roleFeatData.skill,                               slots: FEAT_SLOT_LEVELS.skill }
+        ];
 
-        // Ancestry feats — fill every ancestry feat slot
-        const ancestryFeats = roleFeatData.ancestry?.[this.ancestryKey] || [];
-        await fillSlots(ancestryFeats, "ancestry", FEAT_SLOT_LEVELS.ancestry);
+        for (const { key, pool, slots } of categories) {
+            const slotsNeeded = slots.filter(l => l <= charLevel).length;
+            if (slotsNeeded === 0) continue;
 
-        // General feats — fill every general feat slot
-        await fillSlots(roleFeatData.general, "general", FEAT_SLOT_LEVELS.general);
-
-        // Skill feats — fill every skill feat slot
-        await fillSlots(roleFeatData.skill, "skill", FEAT_SLOT_LEVELS.skill);
+            // If AI provided feats for this category, use them first
+            if (aiFeats?.[key] && Array.isArray(aiFeats[key]) && aiFeats[key].length > 0) {
+                const aiResults = await lookupFeatNames(aiFeats[key], key);
+                items.push(...aiResults);
+                // Fill any remaining slots with random picks
+                await fillRemainingSlots(pool, key, slotsNeeded, aiResults.length);
+            } else {
+                // No AI override — fill entirely from tables
+                await fillRemainingSlots(pool, key, slotsNeeded, 0);
+            }
+        }
 
         return items;
     }
 
     /**
-     * Fill ALL spell slots based on Wizard spell progression.
-     * Uses the WIZARD_SPELL_SLOTS table to know exactly how many
-     * cantrips and spells of each rank to pick. No empty slots.
+     * Fill ALL spell slots. If AI provided specific spell names (overrides.spells),
+     * look those up in the compendium first. For any remaining unfilled slots,
+     * fall back to random arcane spell selection.
      */
     async _generateSpells(spellcastingEntryId) {
         const items = [];
@@ -363,8 +407,9 @@ export class EntityBuilder {
         if (!slotTable) return items;
 
         const index = await pack.getIndex({ fields: ["name", "system.level.value", "system.traits.value"] });
+        const aiSpells = this.overrides.spells;
 
-        // Build a cache of arcane spells by rank
+        // Build a cache of arcane spells by rank for random fallback
         const spellsByRank = {};
         for (const entry of index) {
             const traits = entry.system?.traits?.value || [];
@@ -375,25 +420,56 @@ export class EntityBuilder {
             spellsByRank[rank].push(entry);
         }
 
+        /**
+         * Try to find a spell by name in the compendium.
+         */
+        const lookupSpellByName = async (name) => {
+            const match = index.find(e => e.name.toLowerCase() === name.toLowerCase().trim());
+            if (!match) return null;
+            return await this._getSpellData(pack, match._id, spellcastingEntryId);
+        };
+
+        /**
+         * For a given rank, try AI names first, then fill remaining with random picks.
+         */
+        const fillRank = async (rank, slotCount, aiNames) => {
+            let filled = 0;
+
+            // Try AI-provided spell names first
+            if (aiNames && aiNames.length > 0) {
+                for (const name of aiNames) {
+                    if (filled >= slotCount) break;
+                    const data = await lookupSpellByName(name);
+                    if (data) {
+                        items.push(data);
+                        filled++;
+                    }
+                }
+            }
+
+            // Fill remaining slots with random arcane spells of this rank
+            const remaining = slotCount - filled;
+            if (remaining > 0) {
+                const pool = this._shuffle(spellsByRank[rank] || []);
+                const picked = pool.slice(0, remaining);
+                for (const match of picked) {
+                    const data = await this._getSpellData(pack, match._id, spellcastingEntryId);
+                    if (data) items.push(data);
+                }
+            }
+        };
+
         // Fill cantrips
         const cantripCount = slotTable.cantrips || 5;
-        const cantripPool = this._shuffle(spellsByRank[0] || []);
-        const pickedCantrips = cantripPool.slice(0, cantripCount);
-        for (const match of pickedCantrips) {
-            const data = await this._getSpellData(pack, match._id, spellcastingEntryId);
-            if (data) items.push(data);
-        }
+        const aiCantrips = aiSpells?.cantrips || [];
+        await fillRank(0, cantripCount, aiCantrips);
 
         // Fill each spell rank
         for (let rank = 1; rank <= 10; rank++) {
             const slotCount = slotTable[rank];
             if (!slotCount || slotCount <= 0) continue;
-            const pool = this._shuffle(spellsByRank[rank] || []);
-            const picked = pool.slice(0, slotCount);
-            for (const match of picked) {
-                const data = await this._getSpellData(pack, match._id, spellcastingEntryId);
-                if (data) items.push(data);
-            }
+            const aiRankSpells = aiSpells?.[String(rank)] || [];
+            await fillRank(rank, slotCount, aiRankSpells);
         }
 
         return items;

@@ -172,7 +172,14 @@ export class NPCGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 genEquipment,
                 concept.ancestry,
                 concept.theme,
-                { name: concept.name, biography: concept.biography, personality: concept.personality }
+                {
+                    name: concept.name,
+                    biography: concept.biography,
+                    personality: concept.personality,
+                    feats: concept.feats,
+                    spells: concept.spells,
+                    equipment: concept.equipment
+                }
             );
             const newActor = await builder.generateNPC();
 
