@@ -37,7 +37,13 @@ export class LootGenerator {
         await lootActor.createEmbeddedDocuments("Item", items);
         
         // Render the sheet
-        lootActor.sheet.render(true);
+        setTimeout(() => {
+            try {
+                lootActor.sheet.render(true, { force: true });
+            } catch (err) {
+                console.error("PF2e NPC Gen | Loot sheet render error:", err);
+            }
+        }, 250);
         return lootActor;
     }
 

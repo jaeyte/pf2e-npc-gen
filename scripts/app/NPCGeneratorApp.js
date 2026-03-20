@@ -98,12 +98,19 @@ export class NPCGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
             const newActor = await builder.generateNPC();
             if (newActor) {
                 ui.notifications.info(`Created NPC: ${newActor.name}`);
-                newActor.sheet.render(true);
                 app.close();
+                // Delay sheet render to ensure actor is fully initialized
+                setTimeout(() => {
+                    try {
+                        newActor.sheet.render(true, { force: true });
+                    } catch (err) {
+                        console.error("PF2e NPC Gen | Sheet render error:", err);
+                    }
+                }, 250);
             }
         } catch (error) {
             console.error("PF2e NPC Gen | NPC Error:", error);
-            ui.notifications.error("Failed to generate NPC.");
+            ui.notifications.error("Failed to generate NPC. Check the console (F12) for details.");
         }
     }
 
@@ -171,8 +178,14 @@ export class NPCGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
             if (newActor) {
                 ui.notifications.info(`Created: ${newActor.name}`);
-                newActor.sheet.render(true);
                 app.close();
+                setTimeout(() => {
+                    try {
+                        newActor.sheet.render(true, { force: true });
+                    } catch (err) {
+                        console.error("PF2e NPC Gen | Sheet render error:", err);
+                    }
+                }, 250);
             }
         } catch (error) {
             console.error("PF2e NPC Gen | AI Error:", error);
