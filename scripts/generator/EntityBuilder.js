@@ -270,17 +270,6 @@ export class EntityBuilder {
         return items;
     }
 
-    _getTraitsForRole(role) {
-        switch(role) {
-            case "brute": return ["fighter", "barbarian", "rage"];
-            case "skirmisher": return ["rogue", "swashbuckler", "finesse"];
-            case "spellcaster": return ["wizard", "sorcerer", "magical"];
-            case "sniper": return ["ranger", "archetype", "ranged"];
-            case "soldier": return ["fighter", "champion", "stance"];
-            default: return ["general"];
-        }
-    }
-
     async _generateSpells(spellcastingEntryId) {
         const items = [];
         const pack = game.packs.get("pf2e.spells-srd");
