@@ -135,7 +135,10 @@ export class EntityBuilder {
             attributes: {
                 hp: { value: hpVal, max: hpVal },
                 ac: { value: acVal },
-                speed: { value: this.ancestry.speed }
+                speed: { value: this.ancestry.speed },
+                immunities: [],
+                resistances: [],
+                weaknesses: []
             },
             saves: {
                 fortitude: { value: fortVal },
