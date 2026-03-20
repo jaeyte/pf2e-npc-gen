@@ -1,6 +1,6 @@
-import { STAT_TABLES, ROLE_TEMPLATES } from "./DataTables.js";
+import { STAT_TABLES, ROLE_TEMPLATES, ROLE_CLASS_MAP, ROLE_BACKGROUND_MAP, ANCESTRY_HERITAGE_MAP } from "./DataTables.js";
 import { BASIC_EQUIPMENT, ROLE_EQUIPMENT_PREFS } from "./EquipmentTables.js";
-import { ROLE_FEATURES } from "./FeatureTables.js";
+import { ROLE_FEATS } from "./FeatureTables.js";
 import { ANCESTRIES, PERSONALITY_QUIRKS } from "./AncestryTables.js";
 import { THEMES } from "./ThemeTables.js";
 
@@ -33,54 +33,77 @@ export class EntityBuilder {
     async generateNPC() {
         const firstName = this.ancestry.names[Math.floor(Math.random() * this.ancestry.names.length)];
         const prefix = this.theme.prefix ? this.theme.prefix + " " : "";
+        const className = ROLE_CLASS_MAP[this.roleKey] || "Fighter";
         const actorName = this.overrides.name
             ? this.overrides.name
-            : `${prefix}${firstName} (${this.ancestry.name} ${this.roleKey.capitalize()})`;
+            : `${prefix}${firstName} (${this.ancestry.name} ${className})`;
 
         let bio;
         if (this.overrides.biography) {
             bio = this.overrides.biography;
             if (this.overrides.personality) bio += `<p><em>${this.overrides.personality}</em></p>`;
         } else {
-            bio = this._generateBio(firstName);
+            bio = this._generateBio(firstName, className);
         }
+
+        // Convert modifiers to ability scores (mod * 2 + 10)
+        const modToScore = (mod) => (mod ?? 0) * 2 + 10;
 
         let actorData = {
             name: actorName,
             type: "character",
             system: {
-                ...this._generateBaseStats(),
+                abilities: {
+                    str: { value: modToScore(this.roleTemplate.abilityMods?.str) },
+                    dex: { value: modToScore(this.roleTemplate.abilityMods?.dex) },
+                    con: { value: modToScore(this.roleTemplate.abilityMods?.con) },
+                    int: { value: modToScore(this.roleTemplate.abilityMods?.int) },
+                    wis: { value: modToScore(this.roleTemplate.abilityMods?.wis) },
+                    cha: { value: modToScore(this.roleTemplate.abilityMods?.cha) }
+                },
+                attributes: {
+                    speed: { value: this.ancestry.speed },
+                    hp: {},
+                    immunities: [],
+                    resistances: [],
+                    weaknesses: []
+                },
                 details: {
                     level: { value: this.level },
                     alliance: "opposition",
-                    ancestry: { name: this.ancestry.name },
-                    class: { name: this.roleKey.capitalize() },
                     biography: {
                         public: bio
                     }
                 },
-                build: {
-                    languages: {
-                        granted: [{ slug: "common" }]
-                    }
-                }
+                traits: {
+                    value: [...new Set([...this.ancestry.traits, ...(this.theme.traits || [])])],
+                    rarity: "common",
+                    size: { value: "med" }
+                },
+                resources: {}
             },
             items: []
         };
 
-        // Apply Ancestry & Theme Traits
-        actorData.system.traits = {
-            value: [...new Set([...this.ancestry.traits, ...(this.theme.traits || [])])],
-            rarity: "common",
-            size: { value: "med" }
-        };
-
-        // Add standard strike
-        if (this.roleTemplate.attack) {
-            actorData.items.push(this._generateBaseStrike());
+        // Apply theme resistances/weaknesses
+        if (this.theme.resistances) {
+            actorData.system.attributes.resistances = this.theme.resistances.map(r => ({
+                type: r.type,
+                value: r.value === "Level" ? this.level : r.value
+            }));
+        }
+        if (this.theme.weaknesses) {
+            actorData.system.attributes.weaknesses = this.theme.weaknesses.map(w => ({
+                type: w.type,
+                value: w.value === "Level" ? this.level : w.value
+            }));
         }
 
-        // Add spellcasting entry
+        // Pull ancestry, heritage, background, and class from compendiums
+        const compendiumItems = await this._generateCompendiumFoundation();
+        actorData.items.push(...compendiumItems);
+
+        // Add spellcasting entry + spells for spellcaster role
         if (this.roleTemplate.spellDC) {
             const spellcastingEntry = this._generateSpellcastingEntry();
             spellcastingEntry._id = foundry.utils.randomID();
@@ -89,194 +112,238 @@ export class EntityBuilder {
             actorData.items.push(...spellItems);
         }
 
+        // Add equipment (weapons, armor, shields, gear)
         if (this.generateEquipment) {
-           const equipmentItems = await this._generateEquipment();
-           actorData.items.push(...equipmentItems);
+            const equipmentItems = await this._generateEquipment();
+            actorData.items.push(...equipmentItems);
         }
 
-        const featureItems = await this._generateFeatures();
-        actorData.items.push(...featureItems);
+        // Add feats (class, ancestry, general, skill)
+        const featItems = await this._generateFeats();
+        actorData.items.push(...featItems);
 
         if (game.settings.get("pf2e-npc-gen", "logGeneration")) {
             console.log("PF2e NPC Gen | Actor data:", JSON.parse(JSON.stringify(actorData)));
         }
 
         const newActor = await Actor.create(actorData);
-        console.log("PF2e NPC Gen | Created actor:", newActor?.id, newActor?.name);
+        console.log("PF2e NPC Gen | Created PC actor:", newActor?.id, newActor?.name);
         return newActor;
     }
 
-    _generateBio(name) {
+    _generateBio(name, className) {
         const quirk = PERSONALITY_QUIRKS[Math.floor(Math.random() * PERSONALITY_QUIRKS.length)];
-        return `<p><strong>${name}</strong> is a ${this.ancestry.name} ${this.roleKey}. ${this.theme.description}</p><p><em>Quirk: ${quirk}</em></p>`;
+        return `<p><strong>${name}</strong> is a ${this.ancestry.name} ${className}. ${this.theme.description}</p><p><em>Quirk: ${quirk}</em></p>`;
     }
 
-    _generateBaseStats() {
-        let hpVal = STAT_TABLES.hp[this.roleTemplate.hp][this.levelIndex];
-        let acVal = STAT_TABLES.ac[this.roleTemplate.ac][this.levelIndex];
-        
-        let fortVal = STAT_TABLES.saves[this.roleTemplate.fortitude][this.levelIndex];
-        let refVal  = STAT_TABLES.saves[this.roleTemplate.reflex][this.levelIndex];
-        let willVal = STAT_TABLES.saves[this.roleTemplate.will][this.levelIndex];
+    /**
+     * Pull ancestry, heritage, background, and class items from PF2e compendiums.
+     * These are the foundation items that the PC sheet uses to compute proficiencies,
+     * HP, class features, etc.
+     */
+    async _generateCompendiumFoundation() {
+        const items = [];
 
-        // Apply Ancestry Tweaks
-        if (this.ancestry.statTweaks) {
-            if (this.ancestry.statTweaks.hp) hpVal += this.ancestry.statTweaks.hp;
+        // Ancestry (e.g., "Human" from pf2e.ancestries)
+        const ancestryItem = await this._findItemInCompendium("pf2e.ancestries", this.ancestry.name);
+        if (ancestryItem) {
+            items.push(ancestryItem.toObject());
         }
 
-        // Apply Theme Tweaks
-        if (this.theme.statTweaks) {
-            if (this.theme.statTweaks.hp) hpVal += this.theme.statTweaks.hp;
-            if (this.theme.statTweaks.ac) acVal += this.theme.statTweaks.ac;
-            if (this.theme.statTweaks.saves) {
-                fortVal += this.theme.statTweaks.saves;
-                refVal += this.theme.statTweaks.saves;
-                willVal += this.theme.statTweaks.saves;
+        // Heritage (e.g., "Versatile Human" from pf2e.heritages)
+        const heritageName = ANCESTRY_HERITAGE_MAP[this.ancestryKey];
+        if (heritageName) {
+            const heritageItem = await this._findItemInCompendium("pf2e.heritages", heritageName);
+            if (heritageItem) {
+                items.push(heritageItem.toObject());
             }
         }
 
-        // Convert modifiers to ability scores (mod * 2 + 10)
-        const modToScore = (mod) => (mod ?? 0) * 2 + 10;
-
-        const system = {
-            abilities: {
-                str: { value: modToScore(this.roleTemplate.abilityMods?.str) },
-                dex: { value: modToScore(this.roleTemplate.abilityMods?.dex) },
-                con: { value: modToScore(this.roleTemplate.abilityMods?.con) },
-                int: { value: modToScore(this.roleTemplate.abilityMods?.int) },
-                wis: { value: modToScore(this.roleTemplate.abilityMods?.wis) },
-                cha: { value: modToScore(this.roleTemplate.abilityMods?.cha) }
-            },
-            attributes: {
-                hp: { value: hpVal, max: hpVal },
-                ac: { value: acVal },
-                speed: { value: this.ancestry.speed },
-                immunities: [],
-                resistances: [],
-                weaknesses: []
-            },
-            saves: {
-                fortitude: { value: fortVal },
-                reflex: { value: refVal },
-                will: { value: willVal }
+        // Background (e.g., "Warrior" from pf2e.backgrounds)
+        const backgroundName = ROLE_BACKGROUND_MAP[this.roleKey];
+        if (backgroundName) {
+            const bgItem = await this._findItemInCompendium("pf2e.backgrounds", backgroundName);
+            if (bgItem) {
+                items.push(bgItem.toObject());
             }
-        };
-
-        // Resources
-        system.resources = {};
-
-        // Add Perception & Senses
-        const perceptionMod = STAT_TABLES.saves[this.roleTemplate.will]?.[this.levelIndex] || 0;
-        const senses = [];
-        if (this.ancestry.senses) senses.push({ type: this.ancestry.senses.toLowerCase().replace(/\s+/g, "-") });
-        if (this.theme.senses) senses.push({ type: this.theme.senses.toLowerCase().replace(/\s+/g, "-") });
-        system.perception = { value: perceptionMod, senses: senses };
-
-        // Resistances / Weaknesses
-        if (this.theme.resistances) {
-            system.attributes.resistances = this.theme.resistances.map(r => ({
-                type: r.type,
-                value: r.value === "Level" ? this.level : r.value
-            }));
-        }
-        if (this.theme.weaknesses) {
-            system.attributes.weaknesses = this.theme.weaknesses.map(w => ({
-                type: w.type,
-                value: w.value === "Level" ? this.level : w.value
-            }));
         }
 
-        return system;
-    }
-
-    _generateBaseStrike() {
-        let attackBonus = STAT_TABLES.attack[this.roleTemplate.attack][this.levelIndex];
-        const damageFormula = STAT_TABLES.damage[this.roleTemplate.damage][this.levelIndex];
-        const damageType = this.theme.damageType || "bludgeoning";
-
-        if (this.theme.statTweaks?.attack) attackBonus += this.theme.statTweaks.attack;
-
-        return {
-            name: this.theme.damageType ? `${this.theme.name} Strike` : "Default Strike",
-            type: "melee",
-            system: {
-                damageRolls: {
-                    damage1: { damage: damageFormula, damageType: damageType }
-                },
-                bonus: { value: attackBonus },
-                traits: { value: [] },
-                weaponType: { value: "simple" },
+        // Class (e.g., "Barbarian" from pf2e.classes)
+        const className = ROLE_CLASS_MAP[this.roleKey];
+        if (className) {
+            const classItem = await this._findItemInCompendium("pf2e.classes", className);
+            if (classItem) {
+                items.push(classItem.toObject());
             }
-        };
-    }
+        }
 
-    _generateSpellcastingEntry() {
-          const dcVal = STAT_TABLES.spellDC[this.roleTemplate.spellDC][this.levelIndex];
-          const attackVal = STAT_TABLES.attack.high[this.levelIndex];
-
-          return {
-             name: "Innate Spells",
-             type: "spellcastingEntry",
-             system: {
-                 spelldc: { dc: dcVal, value: attackVal, mod: 0 },
-                 tradition: { value: "arcane" },
-                 prepared: { value: "innate" },
-                 showSlotlessLevels: { value: false }
-             }
-          }
+        return items;
     }
 
     async _findItemInCompendium(compendiumKey, itemName) {
         const pack = game.packs.get(compendiumKey);
-        if (!pack) return null;
-        const index = await pack.getIndex({fields: ["name", "type"]});
+        if (!pack) {
+            console.warn(`PF2e NPC Gen | Compendium not found: ${compendiumKey}`);
+            return null;
+        }
+        const index = await pack.getIndex({ fields: ["name", "type"] });
         const match = index.find(entry => entry.name.toLowerCase() === itemName.toLowerCase());
         if (match) return await pack.getDocument(match._id);
+        console.warn(`PF2e NPC Gen | Item "${itemName}" not found in ${compendiumKey}`);
         return null;
+    }
+
+    _generateSpellcastingEntry() {
+        const dcVal = STAT_TABLES.spellDC[this.roleTemplate.spellDC][this.levelIndex];
+        const attackVal = STAT_TABLES.attack.high[this.levelIndex];
+
+        return {
+            name: "Arcane Spells",
+            type: "spellcastingEntry",
+            system: {
+                spelldc: { dc: dcVal, value: attackVal, mod: 0 },
+                tradition: { value: "arcane" },
+                prepared: { value: "prepared" },
+                showSlotlessLevels: { value: false }
+            }
+        };
     }
 
     async _generateEquipment() {
         const prefs = ROLE_EQUIPMENT_PREFS[this.roleKey] || ROLE_EQUIPMENT_PREFS["brute"];
         const items = [];
-        let weaponCategory = BASIC_EQUIPMENT.weapons.melee;
-        if (prefs.weapon === 'bows') weaponCategory = BASIC_EQUIPMENT.weapons.ranged;
 
+        // Select weapon
+        let weaponCategory = BASIC_EQUIPMENT.weapons.melee;
+        if (prefs.weapon === "bows") weaponCategory = BASIC_EQUIPMENT.weapons.ranged;
         const weaponList = weaponCategory[prefs.weapon] || weaponCategory.simple;
         const chosenWeaponName = weaponList[Math.floor(Math.random() * weaponList.length)];
+
+        // Select armor
         const armorList = BASIC_EQUIPMENT.armor[prefs.armor] || BASIC_EQUIPMENT.armor.unarmored;
         const chosenArmorName = armorList[Math.floor(Math.random() * armorList.length)];
 
         try {
+            // Add weapon — equipped in main hand
             const weaponItem = await this._findItemInCompendium("pf2e.equipment-srd", chosenWeaponName);
             if (weaponItem) {
                 const weaponData = weaponItem.toObject();
+                // Scale runes based on level
                 const potency = Math.floor(this.level / 4);
                 const striking = Math.floor((this.level - 1) / 3);
-                weaponData.system.potencyRune = { value: Math.max(0, Math.min(3, potency)) };
-                weaponData.system.strikingRune = { value: Math.max(0, Math.min(3, striking)) };
+                if (potency > 0) weaponData.system.potencyRune = { value: Math.min(3, potency) };
+                if (striking > 0) weaponData.system.strikingRune = { value: Math.min(3, striking) };
+                // Equip the weapon (held in one or two hands)
+                const isTwo = weaponData.system?.traits?.value?.includes("two-hand") ||
+                              ["Greatsword", "Greataxe", "Maul", "Longbow"].includes(chosenWeaponName);
+                weaponData.system.equipped = {
+                    carryType: "held",
+                    handsHeld: isTwo ? 2 : 1,
+                    invested: null
+                };
                 items.push(weaponData);
             }
+
+            // Add armor — equipped and invested
             const armorItem = await this._findItemInCompendium("pf2e.equipment-srd", chosenArmorName);
             if (armorItem) {
-                 const armorData = armorItem.toObject();
-                 armorData.system.equipped.inSlot = true;
-                 items.push(armorData);
+                const armorData = armorItem.toObject();
+                // Scale resilient rune based on level
+                const resilient = Math.floor((this.level + 1) / 5);
+                if (resilient > 0) armorData.system.resilientRune = { value: Math.min(3, resilient) };
+                armorData.system.equipped = {
+                    carryType: "worn",
+                    inSlot: true,
+                    invested: true
+                };
+                items.push(armorData);
             }
-        } catch (e) { console.error(e); }
+
+            // Add shield if role prefers one
+            if (prefs.shield) {
+                const shieldName = BASIC_EQUIPMENT.shields[Math.floor(Math.random() * BASIC_EQUIPMENT.shields.length)];
+                const shieldItem = await this._findItemInCompendium("pf2e.equipment-srd", shieldName);
+                if (shieldItem) {
+                    const shieldData = shieldItem.toObject();
+                    shieldData.system.equipped = {
+                        carryType: "held",
+                        handsHeld: 1,
+                        invested: null
+                    };
+                    items.push(shieldData);
+                }
+            }
+
+            // Add basic adventuring gear
+            for (const gearName of BASIC_EQUIPMENT.adventuringGear) {
+                const gearItem = await this._findItemInCompendium("pf2e.equipment-srd", gearName);
+                if (gearItem) {
+                    const gearData = gearItem.toObject();
+                    gearData.system.equipped = {
+                        carryType: "stowed",
+                        invested: null
+                    };
+                    items.push(gearData);
+                }
+            }
+
+            // Add a healing potion appropriate for level
+            const potionIndex = Math.min(
+                BASIC_EQUIPMENT.consumables.healing.length - 1,
+                Math.floor(this.level / 5)
+            );
+            const potionName = BASIC_EQUIPMENT.consumables.healing[potionIndex];
+            const potionItem = await this._findItemInCompendium("pf2e.equipment-srd", potionName);
+            if (potionItem) {
+                items.push(potionItem.toObject());
+            }
+        } catch (e) {
+            console.error("PF2e NPC Gen | Equipment generation error:", e);
+        }
+
         return items;
     }
 
-    async _generateFeatures() {
+    /**
+     * Generate feats from pf2e.feats-srd compendium.
+     * Pulls class feats, ancestry feats, general feats, and skill feats
+     * based on role and ancestry with probabilistic selection.
+     */
+    async _generateFeats() {
         const items = [];
-        const potentialFeatures = ROLE_FEATURES[this.roleKey] || [];
-        for (const feature of potentialFeatures) {
-            if (Math.random() <= feature.chance) {
-                const entity = await this._findItemInCompendium("pf2e.bestiary-ability-glossary-srd", feature.name);
-                if (entity) items.push(entity.toObject());
+        const roleFeatData = ROLE_FEATS[this.roleKey];
+        if (!roleFeatData) return items;
+
+        const addFeats = async (featList, category) => {
+            if (!featList) return;
+            for (const feat of featList) {
+                if (Math.random() <= feat.chance) {
+                    const doc = await this._findItemInCompendium("pf2e.feats-srd", feat.name);
+                    if (doc) {
+                        const data = doc.toObject();
+                        // Tag the feat category for sheet display
+                        if (data.system && category) {
+                            data.system.category = category;
+                        }
+                        items.push(data);
+                    }
+                }
             }
-        }
-        // Note: feats from pf2e.feats-srd could be added here since
-        // the actor is now a PC-type character.
+        };
+
+        // Class feats
+        await addFeats(roleFeatData.class, "class");
+
+        // Ancestry feats (specific to chosen ancestry)
+        const ancestryFeats = roleFeatData.ancestry?.[this.ancestryKey];
+        await addFeats(ancestryFeats, "ancestry");
+
+        // General feats
+        await addFeats(roleFeatData.general, "general");
+
+        // Skill feats
+        await addFeats(roleFeatData.skill, "skill");
+
         return items;
     }
 
@@ -284,7 +351,7 @@ export class EntityBuilder {
         const items = [];
         const pack = game.packs.get("pf2e.spells-srd");
         if (!pack) return items;
-        const index = await pack.getIndex({fields: ["name", "system.level.value", "system.traits.value"]});
+        const index = await pack.getIndex({ fields: ["name", "system.level.value", "system.traits.value"] });
         const maxRank = Math.max(1, Math.ceil(this.level / 2));
         const ranks = [0];
         for (let r = 1; r <= maxRank; r++) ranks.push(r);
@@ -297,7 +364,7 @@ export class EntityBuilder {
                 return entry.system?.traits?.value?.includes("arcane");
             });
             if (matchingSpells.length === 0) continue;
-            const num = targetRank === 0 ? 2 : Math.floor(Math.random() * 2) + 1;
+            const num = targetRank === 0 ? 3 : Math.floor(Math.random() * 2) + 1;
             for (let i = 0; i < num; i++) {
                 const match = matchingSpells[Math.floor(Math.random() * matchingSpells.length)];
                 try {
