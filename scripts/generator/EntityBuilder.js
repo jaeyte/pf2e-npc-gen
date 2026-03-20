@@ -124,6 +124,14 @@ export class EntityBuilder {
         }
 
         const system = {
+            abilities: {
+                str: { mod: this.roleTemplate.abilityMods?.str ?? 0 },
+                dex: { mod: this.roleTemplate.abilityMods?.dex ?? 0 },
+                con: { mod: this.roleTemplate.abilityMods?.con ?? 0 },
+                int: { mod: this.roleTemplate.abilityMods?.int ?? 0 },
+                wis: { mod: this.roleTemplate.abilityMods?.wis ?? 0 },
+                cha: { mod: this.roleTemplate.abilityMods?.cha ?? 0 }
+            },
             attributes: {
                 hp: { value: hpVal, max: hpVal },
                 ac: { value: acVal },
