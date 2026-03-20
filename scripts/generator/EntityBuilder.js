@@ -265,35 +265,9 @@ export class EntityBuilder {
                 if (entity) items.push(entity.toObject());
             }
         }
-        const featPack = game.packs.get("pf2e.feats-srd");
-        if (featPack) {
-            const index = await featPack.getIndex({fields: ["name", "system.level.value", "system.traits.value"]});
-            const roleTraits = this._getTraitsForRole(this.roleKey);
-            const possibleFeats = index.filter(f => (f.system?.level?.value || 0) <= this.level && roleTraits.some(t => f.system?.traits?.value?.includes(t)));
-            if (possibleFeats.length > 0) {
-                const numFeats = Math.floor(Math.random() * 2) + 1;
-                for (let i = 0; i < numFeats; i++) {
-                    const match = possibleFeats[Math.floor(Math.random() * possibleFeats.length)];
-                    const featDoc = await featPack.getDocument(match._id);
-                    if (featDoc) {
-                        const featData = featDoc.toObject();
-                        if (!items.find(it => it.name === featData.name)) items.push(featData);
-                    }
-                }
-            }
-        }
+        // Note: feats from pf2e.feats-srd are not added here because
+        // PF2e only allows feat items on PC-type actors, not NPCs.
         return items;
-    }
-
-    _getTraitsForRole(role) {
-        switch(role) {
-            case "brute": return ["fighter", "barbarian", "rage"];
-            case "skirmisher": return ["rogue", "swashbuckler", "finesse"];
-            case "spellcaster": return ["wizard", "sorcerer", "magical"];
-            case "sniper": return ["ranger", "archetype", "ranged"];
-            case "soldier": return ["fighter", "champion", "stance"];
-            default: return ["general"];
-        }
     }
 
     async _generateSpells(spellcastingEntryId) {
