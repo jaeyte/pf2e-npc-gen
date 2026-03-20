@@ -28,7 +28,7 @@ Hooks.once("init", async () => {
             "openrouter":  "OpenRouter (Free models available)",
             "custom":      "Custom (OpenAI-compatible endpoint)"
         },
-        default: "openai"
+        default: "groq"
     });
 
     game.settings.register("pf2e-npc-gen", "aiApiKey", {

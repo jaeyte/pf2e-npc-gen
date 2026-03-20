@@ -2,7 +2,7 @@
 
 A Foundry VTT module for Pathfinder 2e that generates combat-ready characters and encounter loot on the fly. Characters are built as full PC-type actors with real classes, ancestries, heritages, backgrounds, feats, equipment, and spells pulled from the PF2e compendiums. Everything uses the standard character sheet so gear, spells, and feats are fully interactive.
 
-![Version 2.3.5](https://img.shields.io/badge/version-2.3.5-green)
+![Version 3.0.0](https://img.shields.io/badge/version-3.0.0-green)
 ![Foundry v13](https://img.shields.io/badge/Foundry-v13-informational)
 ![PF2e 6.0+](https://img.shields.io/badge/PF2e-6.0%2B-blueviolet)
 

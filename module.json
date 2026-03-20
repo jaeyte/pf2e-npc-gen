@@ -1,13 +1,13 @@
 {
   "id": "pf2e-npc-gen",
   "title": "Pathfinder 2e NPC Generator",
-  "version": "2.3.5",
+  "version": "3.0.0",
   "compatibility": {
     "minimum": "13",
     "verified": "13",
     "maximum": "13"
   },
-  "description": "A module to generate Pathfinder 2e NPCs complete with stats, features, and equipment based on role and level guidelines.",
+  "description": "Generate complete, ready-to-play Pathfinder 2e characters with real classes, feats, spells, and equipment from PF2e compendiums. Includes AI-powered concept-to-character generation and a loot generator.",
   "authors": [
     {
       "name": "Antigravity",
