@@ -1,7 +1,7 @@
 {
   "id": "pf2e-npc-gen",
   "title": "Pathfinder 2e NPC Generator",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "compatibility": {
     "minimum": "13",
     "verified": "13",
