@@ -47,15 +47,22 @@ export class EntityBuilder {
 
         let actorData = {
             name: actorName,
-            type: "npc",
+            type: "character",
             system: {
                 ...this._generateBaseStats(),
                 details: {
                     level: { value: this.level },
                     alliance: "opposition",
-                    source: { value: "pf2e-npc-gen" },
-                    languages: { value: ["common"] },
-                    publicNotes: bio
+                    ancestry: { name: this.ancestry.name },
+                    class: { name: this.roleKey.capitalize() },
+                    biography: {
+                        public: bio
+                    }
+                },
+                build: {
+                    languages: {
+                        granted: [{ slug: "common" }]
+                    }
                 }
             },
             items: []
@@ -128,14 +135,17 @@ export class EntityBuilder {
             }
         }
 
+        // Convert modifiers to ability scores (mod * 2 + 10)
+        const modToScore = (mod) => (mod ?? 0) * 2 + 10;
+
         const system = {
             abilities: {
-                str: { mod: this.roleTemplate.abilityMods?.str ?? 0 },
-                dex: { mod: this.roleTemplate.abilityMods?.dex ?? 0 },
-                con: { mod: this.roleTemplate.abilityMods?.con ?? 0 },
-                int: { mod: this.roleTemplate.abilityMods?.int ?? 0 },
-                wis: { mod: this.roleTemplate.abilityMods?.wis ?? 0 },
-                cha: { mod: this.roleTemplate.abilityMods?.cha ?? 0 }
+                str: { value: modToScore(this.roleTemplate.abilityMods?.str) },
+                dex: { value: modToScore(this.roleTemplate.abilityMods?.dex) },
+                con: { value: modToScore(this.roleTemplate.abilityMods?.con) },
+                int: { value: modToScore(this.roleTemplate.abilityMods?.int) },
+                wis: { value: modToScore(this.roleTemplate.abilityMods?.wis) },
+                cha: { value: modToScore(this.roleTemplate.abilityMods?.cha) }
             },
             attributes: {
                 hp: { value: hpVal, max: hpVal },
@@ -265,8 +275,8 @@ export class EntityBuilder {
                 if (entity) items.push(entity.toObject());
             }
         }
-        // Note: feats from pf2e.feats-srd are not added here because
-        // PF2e only allows feat items on PC-type actors, not NPCs.
+        // Note: feats from pf2e.feats-srd could be added here since
+        // the actor is now a PC-type character.
         return items;
     }
 
