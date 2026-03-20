@@ -52,6 +52,9 @@ export class EntityBuilder {
                 ...this._generateBaseStats(),
                 details: {
                     level: { value: this.level },
+                    alliance: "opposition",
+                    source: { value: "pf2e-npc-gen" },
+                    languages: { value: ["common"] },
                     publicNotes: bio
                 }
             },
@@ -60,7 +63,9 @@ export class EntityBuilder {
 
         // Apply Ancestry & Theme Traits
         actorData.system.traits = {
-            value: [...new Set([...this.ancestry.traits, ...(this.theme.traits || [])])]
+            value: [...new Set([...this.ancestry.traits, ...(this.theme.traits || [])])],
+            rarity: "common",
+            size: { value: "med" }
         };
 
         // Add standard strike
@@ -147,6 +152,9 @@ export class EntityBuilder {
             }
         };
 
+        // Resources
+        system.resources = {};
+
         // Add Perception & Senses
         const perceptionMod = STAT_TABLES.saves[this.roleTemplate.will]?.[this.levelIndex] || 0;
         const senses = [];
@@ -186,6 +194,7 @@ export class EntityBuilder {
                     damage1: { damage: damageFormula, damageType: damageType }
                 },
                 bonus: { value: attackBonus },
+                traits: { value: [] },
                 weaponType: { value: "simple" },
             }
         };
