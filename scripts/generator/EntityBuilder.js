@@ -1,6 +1,6 @@
 import { STAT_TABLES, ROLE_TEMPLATES, ROLE_CLASS_MAP, ROLE_BACKGROUND_MAP, ANCESTRY_HERITAGE_MAP } from "./DataTables.js";
 import { BASIC_EQUIPMENT, ROLE_EQUIPMENT_PREFS } from "./EquipmentTables.js";
-import { ROLE_FEATS } from "./FeatureTables.js";
+import { ROLE_FEATS, FEAT_SLOT_LEVELS, WIZARD_SPELL_SLOTS } from "./FeatureTables.js";
 import { ANCESTRIES, PERSONALITY_QUIRKS } from "./AncestryTables.js";
 import { THEMES } from "./ThemeTables.js";
 
@@ -28,6 +28,15 @@ export class EntityBuilder {
     _getRandomKey(obj) {
         const keys = Object.keys(obj);
         return keys[Math.floor(Math.random() * keys.length)];
+    }
+
+    _shuffle(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
     }
 
     async generateNPC() {
@@ -103,7 +112,7 @@ export class EntityBuilder {
         const compendiumItems = await this._generateCompendiumFoundation();
         actorData.items.push(...compendiumItems);
 
-        // Add spellcasting entry + spells for spellcaster role
+        // Add spellcasting entry + spells for spellcaster role (fill ALL slots)
         if (this.roleTemplate.spellDC) {
             const spellcastingEntry = this._generateSpellcastingEntry();
             spellcastingEntry._id = foundry.utils.randomID();
@@ -112,13 +121,13 @@ export class EntityBuilder {
             actorData.items.push(...spellItems);
         }
 
-        // Add equipment (weapons, armor, shields, gear)
+        // Add equipment (weapons, armor, shields, gear) — always for a ready character
         if (this.generateEquipment) {
             const equipmentItems = await this._generateEquipment();
             actorData.items.push(...equipmentItems);
         }
 
-        // Add feats (class, ancestry, general, skill)
+        // Fill ALL feat slots (class, ancestry, general, skill)
         const featItems = await this._generateFeats();
         actorData.items.push(...featItems);
 
@@ -138,43 +147,29 @@ export class EntityBuilder {
 
     /**
      * Pull ancestry, heritage, background, and class items from PF2e compendiums.
-     * These are the foundation items that the PC sheet uses to compute proficiencies,
-     * HP, class features, etc.
      */
     async _generateCompendiumFoundation() {
         const items = [];
 
-        // Ancestry (e.g., "Human" from pf2e.ancestries)
         const ancestryItem = await this._findItemInCompendium("pf2e.ancestries", this.ancestry.name);
-        if (ancestryItem) {
-            items.push(ancestryItem.toObject());
-        }
+        if (ancestryItem) items.push(ancestryItem.toObject());
 
-        // Heritage (e.g., "Versatile Human" from pf2e.heritages)
         const heritageName = ANCESTRY_HERITAGE_MAP[this.ancestryKey];
         if (heritageName) {
             const heritageItem = await this._findItemInCompendium("pf2e.heritages", heritageName);
-            if (heritageItem) {
-                items.push(heritageItem.toObject());
-            }
+            if (heritageItem) items.push(heritageItem.toObject());
         }
 
-        // Background (e.g., "Warrior" from pf2e.backgrounds)
         const backgroundName = ROLE_BACKGROUND_MAP[this.roleKey];
         if (backgroundName) {
             const bgItem = await this._findItemInCompendium("pf2e.backgrounds", backgroundName);
-            if (bgItem) {
-                items.push(bgItem.toObject());
-            }
+            if (bgItem) items.push(bgItem.toObject());
         }
 
-        // Class (e.g., "Barbarian" from pf2e.classes)
         const className = ROLE_CLASS_MAP[this.roleKey];
         if (className) {
             const classItem = await this._findItemInCompendium("pf2e.classes", className);
-            if (classItem) {
-                items.push(classItem.toObject());
-            }
+            if (classItem) items.push(classItem.toObject());
         }
 
         return items;
@@ -224,16 +219,14 @@ export class EntityBuilder {
         const chosenArmorName = armorList[Math.floor(Math.random() * armorList.length)];
 
         try {
-            // Add weapon — equipped in main hand
+            // Weapon — equipped and held
             const weaponItem = await this._findItemInCompendium("pf2e.equipment-srd", chosenWeaponName);
             if (weaponItem) {
                 const weaponData = weaponItem.toObject();
-                // Scale runes based on level
                 const potency = Math.floor(this.level / 4);
                 const striking = Math.floor((this.level - 1) / 3);
                 if (potency > 0) weaponData.system.potencyRune = { value: Math.min(3, potency) };
                 if (striking > 0) weaponData.system.strikingRune = { value: Math.min(3, striking) };
-                // Equip the weapon (held in one or two hands)
                 const isTwo = weaponData.system?.traits?.value?.includes("two-hand") ||
                               ["Greatsword", "Greataxe", "Maul", "Longbow"].includes(chosenWeaponName);
                 weaponData.system.equipped = {
@@ -244,11 +237,10 @@ export class EntityBuilder {
                 items.push(weaponData);
             }
 
-            // Add armor — equipped and invested
+            // Armor — equipped and invested
             const armorItem = await this._findItemInCompendium("pf2e.equipment-srd", chosenArmorName);
             if (armorItem) {
                 const armorData = armorItem.toObject();
-                // Scale resilient rune based on level
                 const resilient = Math.floor((this.level + 1) / 5);
                 if (resilient > 0) armorData.system.resilientRune = { value: Math.min(3, resilient) };
                 armorData.system.equipped = {
@@ -259,7 +251,7 @@ export class EntityBuilder {
                 items.push(armorData);
             }
 
-            // Add shield if role prefers one
+            // Shield
             if (prefs.shield) {
                 const shieldName = BASIC_EQUIPMENT.shields[Math.floor(Math.random() * BASIC_EQUIPMENT.shields.length)];
                 const shieldItem = await this._findItemInCompendium("pf2e.equipment-srd", shieldName);
@@ -274,7 +266,7 @@ export class EntityBuilder {
                 }
             }
 
-            // Add basic adventuring gear
+            // Adventuring gear
             for (const gearName of BASIC_EQUIPMENT.adventuringGear) {
                 const gearItem = await this._findItemInCompendium("pf2e.equipment-srd", gearName);
                 if (gearItem) {
@@ -287,7 +279,7 @@ export class EntityBuilder {
                 }
             }
 
-            // Add a healing potion appropriate for level
+            // Healing potion appropriate for level
             const potionIndex = Math.min(
                 BASIC_EQUIPMENT.consumables.healing.length - 1,
                 Math.floor(this.level / 5)
@@ -305,79 +297,119 @@ export class EntityBuilder {
     }
 
     /**
-     * Generate feats from pf2e.feats-srd compendium.
-     * Pulls class feats, ancestry feats, general feats, and skill feats
-     * based on role and ancestry with probabilistic selection.
+     * Deterministically fill ALL feat slots based on character level.
+     * Calculates the exact number of class/ancestry/general/skill feats
+     * the character should have and picks that many from the tables.
      */
     async _generateFeats() {
         const items = [];
         const roleFeatData = ROLE_FEATS[this.roleKey];
         if (!roleFeatData) return items;
+        const charLevel = Math.max(1, this.level);
 
-        const addFeats = async (featList, category) => {
-            if (!featList) return;
-            for (const feat of featList) {
-                if (Math.random() <= feat.chance) {
-                    const doc = await this._findItemInCompendium("pf2e.feats-srd", feat.name);
-                    if (doc) {
-                        const data = doc.toObject();
-                        // Tag the feat category for sheet display
-                        if (data.system && category) {
-                            data.system.category = category;
-                        }
-                        items.push(data);
-                    }
+        /**
+         * For a given category, determine how many feat slots are available,
+         * filter the feat pool to level-appropriate options, shuffle, and
+         * pick exactly the right number (no more, no less).
+         */
+        const fillSlots = async (featPool, category, slotLevels) => {
+            const slotsNeeded = slotLevels.filter(l => l <= charLevel).length;
+            if (slotsNeeded === 0 || !featPool || featPool.length === 0) return;
+
+            // Filter to feats the character qualifies for
+            const eligible = featPool.filter(f => f.maxLevel <= charLevel);
+            // Shuffle so each generation is different
+            const shuffled = this._shuffle(eligible);
+            const picked = shuffled.slice(0, slotsNeeded);
+
+            for (const feat of picked) {
+                const doc = await this._findItemInCompendium("pf2e.feats-srd", feat.name);
+                if (doc) {
+                    const data = doc.toObject();
+                    if (data.system) data.system.category = category;
+                    items.push(data);
                 }
             }
         };
 
-        // Class feats
-        await addFeats(roleFeatData.class, "class");
+        // Class feats — fill every class feat slot
+        await fillSlots(roleFeatData.class, "class", FEAT_SLOT_LEVELS.class);
 
-        // Ancestry feats (specific to chosen ancestry)
-        const ancestryFeats = roleFeatData.ancestry?.[this.ancestryKey];
-        await addFeats(ancestryFeats, "ancestry");
+        // Ancestry feats — fill every ancestry feat slot
+        const ancestryFeats = roleFeatData.ancestry?.[this.ancestryKey] || [];
+        await fillSlots(ancestryFeats, "ancestry", FEAT_SLOT_LEVELS.ancestry);
 
-        // General feats
-        await addFeats(roleFeatData.general, "general");
+        // General feats — fill every general feat slot
+        await fillSlots(roleFeatData.general, "general", FEAT_SLOT_LEVELS.general);
 
-        // Skill feats
-        await addFeats(roleFeatData.skill, "skill");
+        // Skill feats — fill every skill feat slot
+        await fillSlots(roleFeatData.skill, "skill", FEAT_SLOT_LEVELS.skill);
 
         return items;
     }
 
+    /**
+     * Fill ALL spell slots based on Wizard spell progression.
+     * Uses the WIZARD_SPELL_SLOTS table to know exactly how many
+     * cantrips and spells of each rank to pick. No empty slots.
+     */
     async _generateSpells(spellcastingEntryId) {
         const items = [];
         const pack = game.packs.get("pf2e.spells-srd");
         if (!pack) return items;
-        const index = await pack.getIndex({ fields: ["name", "system.level.value", "system.traits.value"] });
-        const maxRank = Math.max(1, Math.ceil(this.level / 2));
-        const ranks = [0];
-        for (let r = 1; r <= maxRank; r++) ranks.push(r);
 
-        for (const targetRank of ranks) {
-            const matchingSpells = index.filter(entry => {
-                const isCantrip = entry.system?.traits?.value?.includes("cantrip");
-                if (targetRank === 0 && !isCantrip) return false;
-                if (targetRank > 0 && (isCantrip || entry.system?.level?.value !== targetRank)) return false;
-                return entry.system?.traits?.value?.includes("arcane");
-            });
-            if (matchingSpells.length === 0) continue;
-            const num = targetRank === 0 ? 3 : Math.floor(Math.random() * 2) + 1;
-            for (let i = 0; i < num; i++) {
-                const match = matchingSpells[Math.floor(Math.random() * matchingSpells.length)];
-                try {
-                    const doc = await pack.getDocument(match._id);
-                    if (doc) {
-                        const data = doc.toObject();
-                        if (!data.system.location) data.system.location = {};
-                        data.system.location.value = spellcastingEntryId;
-                        items.push(data);
-                    }
-                } catch (e) { console.error(e); }
+        const charLevel = Math.max(1, Math.min(20, this.level));
+        const slotTable = WIZARD_SPELL_SLOTS[charLevel];
+        if (!slotTable) return items;
+
+        const index = await pack.getIndex({ fields: ["name", "system.level.value", "system.traits.value"] });
+
+        // Build a cache of arcane spells by rank
+        const spellsByRank = {};
+        for (const entry of index) {
+            const traits = entry.system?.traits?.value || [];
+            if (!traits.includes("arcane")) continue;
+            const isCantrip = traits.includes("cantrip");
+            const rank = isCantrip ? 0 : (entry.system?.level?.value ?? 0);
+            if (!spellsByRank[rank]) spellsByRank[rank] = [];
+            spellsByRank[rank].push(entry);
+        }
+
+        // Fill cantrips
+        const cantripCount = slotTable.cantrips || 5;
+        const cantripPool = this._shuffle(spellsByRank[0] || []);
+        const pickedCantrips = cantripPool.slice(0, cantripCount);
+        for (const match of pickedCantrips) {
+            const data = await this._getSpellData(pack, match._id, spellcastingEntryId);
+            if (data) items.push(data);
+        }
+
+        // Fill each spell rank
+        for (let rank = 1; rank <= 10; rank++) {
+            const slotCount = slotTable[rank];
+            if (!slotCount || slotCount <= 0) continue;
+            const pool = this._shuffle(spellsByRank[rank] || []);
+            const picked = pool.slice(0, slotCount);
+            for (const match of picked) {
+                const data = await this._getSpellData(pack, match._id, spellcastingEntryId);
+                if (data) items.push(data);
             }
         }
+
         return items;
+    }
+
+    async _getSpellData(pack, docId, spellcastingEntryId) {
+        try {
+            const doc = await pack.getDocument(docId);
+            if (!doc) return null;
+            const data = doc.toObject();
+            if (!data.system.location) data.system.location = {};
+            data.system.location.value = spellcastingEntryId;
+            return data;
+        } catch (e) {
+            console.error("PF2e NPC Gen | Spell load error:", e);
+            return null;
+        }
     }
 }
