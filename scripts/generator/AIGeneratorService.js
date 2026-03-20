@@ -10,6 +10,14 @@ const PROVIDER_DEFAULTS = {
     openai: {
         url:   "https://api.openai.com/v1/chat/completions",
         model: "gpt-4o-mini"
+    },
+    groq: {
+        url:   "https://api.groq.com/openai/v1/chat/completions",
+        model: "llama-3.3-70b-versatile"
+    },
+    openrouter: {
+        url:   "https://openrouter.ai/api/v1/chat/completions",
+        model: "meta-llama/llama-3.3-70b-instruct:free"
     }
 };
 
@@ -94,27 +102,36 @@ export class AIGeneratorService {
                 messages: [{ role: "user", content: userMessage }]
             };
 
-        } else if (provider === "openai" || provider === "custom") {
+        } else if (["openai", "groq", "openrouter", "custom"].includes(provider)) {
+            // All these use the OpenAI-compatible chat completions format
             if (provider === "custom") {
                 url = game.settings.get("pf2e-npc-gen", "aiCustomEndpoint");
                 if (!url) throw new Error("Custom endpoint URL is not configured. Set it in Module Settings.");
             } else {
-                url = PROVIDER_DEFAULTS.openai.url;
+                url = PROVIDER_DEFAULTS[provider].url;
             }
-            const model = modelOverride || PROVIDER_DEFAULTS.openai.model;
+            const model = modelOverride || PROVIDER_DEFAULTS[provider]?.model || PROVIDER_DEFAULTS.openai.model;
             headers = {
                 "Content-Type":  "application/json",
                 "Authorization": `Bearer ${apiKey}`
             };
+            // OpenRouter recommends these headers for identification
+            if (provider === "openrouter") {
+                headers["HTTP-Referer"] = window.location.origin;
+                headers["X-Title"] = "PF2e NPC Generator";
+            }
             body = {
                 model,
                 max_tokens: 600,
                 messages: [
                     { role: "system", content: SYSTEM_PROMPT },
                     { role: "user",   content: userMessage }
-                ],
-                response_format: { type: "json_object" }
+                ]
             };
+            // JSON mode — supported by OpenAI and Groq, not always by others
+            if (provider === "openai" || provider === "groq") {
+                body.response_format = { type: "json_object" };
+            }
 
         } else {
             throw new Error(`Unknown AI provider: "${provider}". Check Module Settings.`);

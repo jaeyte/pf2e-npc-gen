@@ -66,13 +66,18 @@ The AI reads your concept and decides the role, ancestry, theme, and level. The 
 
 ### Choosing a provider
 
-**OpenAI** is the easiest option for most setups. The API supports browser-based requests with no extra configuration.
-- Get a key at [platform.openai.com](https://platform.openai.com)
-- Default model: `gpt-4o-mini`
+#### Free options
 
-**Claude (Anthropic)** works great but has a limitation: Anthropic's API blocks direct browser requests (CORS policy). If you're running Foundry as a desktop app this isn't an issue. If you're on a hosted server, you'll need to route through a proxy — point the **Custom** provider at it.
+**Groq** is the recommended free option. Fast inference with generous free-tier limits.
+- Sign up at [console.groq.com](https://console.groq.com) — free API key, no credit card required
+- Default model: `llama-3.3-70b-versatile` (excellent for structured JSON output)
 
-**Custom / Local** covers anything OpenAI-compatible: Ollama, LM Studio, a self-hosted proxy, etc. Set the provider to *Custom* and enter the full endpoint URL.
+**OpenRouter** aggregates many models including free ones. Good if you want to experiment with different models.
+- Sign up at [openrouter.ai](https://openrouter.ai) — free API key, free models available
+- Default model: `meta-llama/llama-3.3-70b-instruct:free`
+- Browse free models at openrouter.ai/models (filter by "free")
+
+**Ollama / LM Studio** — run models locally for free with zero API costs. Set the provider to *Custom* and enter the endpoint URL:
 
 ```
 Ollama:    http://localhost:11434/v1/chat/completions
@@ -80,6 +85,14 @@ LM Studio: http://localhost:1234/v1/chat/completions
 ```
 
 If you're using a local model, set the **AI Model** field to whatever your server expects (`llama3`, `mistral`, etc.).
+
+#### Paid options
+
+**OpenAI** is the easiest paid option. The API supports browser-based requests with no extra configuration.
+- Get a key at [platform.openai.com](https://platform.openai.com)
+- Default model: `gpt-4o-mini`
+
+**Claude (Anthropic)** works great but has a limitation: Anthropic's API blocks direct browser requests (CORS policy). If you're running Foundry as a desktop app this isn't an issue. If you're on a hosted server, you'll need to route through a proxy — point the **Custom** provider at it.
 
 ### Module settings reference
 
