@@ -60,9 +60,9 @@ export const BASIC_EQUIPMENT = {
     ],
     consumables: {
         healing: [
-            "Minor Healing Potion",
-            "Lesser Healing Potion",
-            "Moderate Healing Potion"
+            "Healing Potion (Minor)",
+            "Healing Potion (Lesser)",
+            "Healing Potion (Moderate)"
         ]
     }
 };

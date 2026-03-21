@@ -42,14 +42,12 @@ export const ROLE_FEATS = {
         class: [
             { name: "Raging Intimidation", maxLevel: 1 },
             { name: "Sudden Charge", maxLevel: 1 },
-            { name: "Acute Vision", maxLevel: 1 },
+            { name: "Moment of Clarity", maxLevel: 1 },
             { name: "Raging Thrower", maxLevel: 1 },
             { name: "No Escape", maxLevel: 6 },
             { name: "Cleave", maxLevel: 6 },
             { name: "Swipe", maxLevel: 4 },
-            { name: "Shake It Off", maxLevel: 4 },
-            { name: "Second Wind", maxLevel: 4 },
-            { name: "Fast Movement", maxLevel: 2 },
+            { name: "Wounded Rage", maxLevel: 4 },
             { name: "Renewed Vigor", maxLevel: 8 },
             { name: "Terrifying Howl", maxLevel: 10 },
             { name: "Come and Get Me", maxLevel: 10 },
@@ -229,7 +227,7 @@ export const ROLE_FEATS = {
             { name: "Hazard Finder", maxLevel: 8 },
             { name: "Penetrating Shot", maxLevel: 10 },
             { name: "Stealthy Companion", maxLevel: 12 },
-            { name: "Distracting Shot", maxLevel: 14 },
+            { name: "Targeting Shot", maxLevel: 14 },
             { name: "Impossible Volley", maxLevel: 18 },
             { name: "Shadow Hunter", maxLevel: 16 },
             { name: "Ultimate Skirmisher", maxLevel: 20 }
@@ -304,7 +302,7 @@ export const ROLE_FEATS = {
             { name: "Counterspell", maxLevel: 1 },
             { name: "Eschew Materials", maxLevel: 1 },
             { name: "Conceal Spell", maxLevel: 2 },
-            { name: "Silent Spell", maxLevel: 4 },
+            { name: "Bespell Weapon", maxLevel: 4 },
             { name: "Spell Penetration", maxLevel: 6 },
             { name: "Steady Spellcasting", maxLevel: 6 },
             { name: "Advanced School Spell", maxLevel: 8 },
@@ -314,11 +312,9 @@ export const ROLE_FEATS = {
             { name: "Clever Counterspell", maxLevel: 12 },
             { name: "Effortless Concentration", maxLevel: 16 },
             { name: "Spell Combination", maxLevel: 20 },
-            { name: "Scroll Savant", maxLevel: 10 },
             { name: "Superior Bond", maxLevel: 14 },
             { name: "Reflect Spell", maxLevel: 14 },
-            { name: "Infinite Possibilities", maxLevel: 18 },
-            { name: "Metamagic Mastery", maxLevel: 16 }
+            { name: "Spell Tinker", maxLevel: 16 }
         ],
         ancestry: {
             human: [
