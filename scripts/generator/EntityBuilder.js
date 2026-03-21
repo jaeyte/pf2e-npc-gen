@@ -243,12 +243,16 @@ export class EntityBuilder {
             const weaponItem = await this._findItemInCompendium("pf2e.equipment-srd", chosenWeaponName);
             if (weaponItem) {
                 const weaponData = weaponItem.toObject();
-                const potency = Math.floor(this.level / 4);
-                const striking = Math.floor((this.level - 1) / 3);
-                if (potency > 0) weaponData.system.potencyRune = { value: Math.min(3, potency) };
-                if (striking > 0) weaponData.system.strikingRune = { value: Math.min(3, striking) };
-                const isTwo = weaponData.system?.traits?.value?.includes("two-hand") ||
-                              ["Greatsword", "Greataxe", "Maul", "Longbow"].includes(chosenWeaponName);
+                // Rune scaling per PF2e item levels:
+                // Potency: +1 at L2, +2 at L10, +3 at L16
+                // Striking: +1 at L4, +2 at L12, +3 at L19
+                const potency = this.level >= 16 ? 3 : this.level >= 10 ? 2 : this.level >= 2 ? 1 : 0;
+                const striking = this.level >= 19 ? 3 : this.level >= 12 ? 2 : this.level >= 4 ? 1 : 0;
+                if (!weaponData.system.runes) weaponData.system.runes = { potency: 0, striking: 0, property: [] };
+                weaponData.system.runes.potency = potency;
+                weaponData.system.runes.striking = striking;
+                const isTwo = weaponData.system?.usage?.value === "held-in-two-hands" ||
+                              weaponData.system?.usage?.value === "held-in-one-plus-hands";
                 weaponData.system.equipped = {
                     carryType: "held",
                     handsHeld: isTwo ? 2 : 1,
@@ -261,8 +265,14 @@ export class EntityBuilder {
             const armorItem = await this._findItemInCompendium("pf2e.equipment-srd", chosenArmorName);
             if (armorItem) {
                 const armorData = armorItem.toObject();
-                const resilient = Math.floor((this.level + 1) / 5);
-                if (resilient > 0) armorData.system.resilientRune = { value: Math.min(3, resilient) };
+                // Armor rune scaling per PF2e item levels:
+                // Potency: +1 at L5, +2 at L11, +3 at L18
+                // Resilient: +1 at L8, +2 at L14, +3 at L20
+                const armorPotency = this.level >= 18 ? 3 : this.level >= 11 ? 2 : this.level >= 5 ? 1 : 0;
+                const resilient = this.level >= 20 ? 3 : this.level >= 14 ? 2 : this.level >= 8 ? 1 : 0;
+                if (!armorData.system.runes) armorData.system.runes = { potency: 0, resilient: 0, property: [] };
+                armorData.system.runes.potency = armorPotency;
+                armorData.system.runes.resilient = resilient;
                 armorData.system.equipped = {
                     carryType: "worn",
                     inSlot: true,
@@ -298,11 +308,8 @@ export class EntityBuilder {
                 }
             }
 
-            // Healing potion appropriate for level
-            const potionIndex = Math.min(
-                BASIC_EQUIPMENT.consumables.healing.length - 1,
-                Math.floor(this.level / 5)
-            );
+            // Healing potion appropriate for level (Minor L1, Lesser L3, Moderate L6, Greater L12, Major L18)
+            const potionIndex = this.level >= 18 ? 4 : this.level >= 12 ? 3 : this.level >= 6 ? 2 : this.level >= 3 ? 1 : 0;
             const potionName = BASIC_EQUIPMENT.consumables.healing[potionIndex];
             const potionItem = await this._findItemInCompendium("pf2e.equipment-srd", potionName);
             if (potionItem) {
